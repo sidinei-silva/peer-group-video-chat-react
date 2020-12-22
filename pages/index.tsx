@@ -3,16 +3,21 @@ import { v4 as uuidv4 } from 'uuid';
 
 export default function Home() {
   const myVideoEl = useRef(null);
-  const myCodeRoom = uuidv4();
   const [pageUrl, setPageUrl] = useState('');
+  const [myCodeRoom, setMyCodeRoomUrlRoom] = useState('');
   const urlRoom = `${pageUrl}/${myCodeRoom}`;
+
+  useEffect(() => {
+    const uuid = uuidv4();
+    setMyCodeRoomUrlRoom(uuid);
+  }, []);
 
   useEffect(() => {
     const fullUrl = `${window.location.protocol}//${window.location.hostname}${
       window.location.port ? `:${window.location.port}` : ''
     }`;
     setPageUrl(fullUrl);
-  });
+  }, [window.location.hostname]);
 
   useEffect(() => {
     if (!myVideoEl) {

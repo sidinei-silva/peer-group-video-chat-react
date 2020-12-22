@@ -15,6 +15,16 @@ if (typeof window !== 'undefined') {
     host: peerHost,
     port: peerPort,
     secure: securePeer,
+    config: {
+      iceServers: [
+        { url: 'stun:108.177.98.127:19302' },
+        {
+          url: 'turn:numb.viagenie.ca',
+          credential: 'muazkh',
+          username: 'webrtc@live.com',
+        },
+      ],
+    },
   });
 }
 

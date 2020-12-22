@@ -29,7 +29,7 @@ const RoomPage: React.FC = () => {
       const video = myVideoEl.current;
       video.srcObject = stream;
       video.onloadedmetadata = function () {
-        console.log('Video do visitante carregado', video);
+        console.log('Video do host carregado', video);
       };
       video.play();
       video.muted = true;

@@ -1,8 +1,10 @@
 import { useRouter } from 'next/dist/client/router';
-import React, { useRef, useEffect, useState, VideoHTMLAttributes } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
 import { openPeer, peerCall, subscribeCall } from '../services/webpeers';
 import {
+  socketSendMessage,
+  subcribeCreateMessage,
   subcribeUserConnect,
   subcribeUserDisconnect,
 } from '../services/websocket';
@@ -13,6 +15,7 @@ const RoomPage: React.FC = () => {
   const myVideoEl = useRef(null);
   const gridVideoEl = useRef(null);
   const [gridCol, setGridCol] = useState(1);
+  const [inputMessage, setInputMessage] = useState('');
 
   const videoClasses = 'object-cover h-full w-full';
   const router = useRouter();
@@ -74,6 +77,17 @@ const RoomPage: React.FC = () => {
         }
       }
     });
+
+    subcribeCreateMessage((err, message) => {
+      const chatList = document.getElementById('chat-list');
+      const messageItem = document.createElement('li');
+      messageItem.className += 'p-1 px-3 text-sm';
+      const itemText = document.createTextNode(message);
+      messageItem.append(itemText);
+      chatList.append(messageItem);
+      const windowsChat = document.getElementById('windows-chat');
+      windowsChat.scrollTop = windowsChat.scrollHeight;
+    });
   }, []);
 
   useEffect(() => {
@@ -95,6 +109,12 @@ const RoomPage: React.FC = () => {
     }
   });
 
+  const keyDownEnter = event => {
+    if (event.which === 13) {
+      handleSendMessage();
+    }
+  };
+
   const addVideoStream = (videoElement, stream) => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
@@ -106,6 +126,22 @@ const RoomPage: React.FC = () => {
         setGridCol(gridCol + 1);
       }
     });
+  };
+
+  const handleSendMessage = () => {
+    if (inputMessage.length > 0) {
+      const chatList = document.getElementById('chat-list');
+      const messageItem = document.createElement('li');
+      messageItem.className += 'p-1 text-sm text-right';
+      const itemText = document.createTextNode(inputMessage);
+      messageItem.append(itemText);
+      chatList.append(messageItem);
+      const windowsChat = document.getElementById('windows-chat');
+      windowsChat.scrollTop = windowsChat.scrollHeight;
+
+      socketSendMessage(inputMessage);
+      setInputMessage('');
+    }
   };
 
   return (
@@ -123,19 +159,23 @@ const RoomPage: React.FC = () => {
           <h4 className=" font-bold text-xl">Chat</h4>
         </div>
         <div className="h-5/6">
-          <div className="flex-grow overflow-y-auto">
-            <ul className="list-none" />
+          <div id="windows-chat" className="flex-grow overflow-y-auto">
+            <ul id="chat-list" className="list-none" />
           </div>
         </div>
         <div className="border-t-2 border-gray-200 px-1 pt-4">
           <div className="relative">
             <input
+              onKeyDown={keyDownEnter}
+              value={inputMessage}
+              onChange={event => setInputMessage(event.target.value)}
               type="text"
               placeholder="Escreva uma mensagem para todos"
               className="text-left w-full text-sm focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 px-4 shadow rounded-full py-3"
             />
             <div className="absolute right-0 items-center inset-y-0 hidden sm:flex">
               <button
+                onClick={handleSendMessage}
                 type="button"
                 className="inline-flex items-center justify-center rounded-full h-12 w-12 transition duration-500 ease-in-out text-white bg-blue-500 hover:bg-blue-400 focus:outline-none"
               >

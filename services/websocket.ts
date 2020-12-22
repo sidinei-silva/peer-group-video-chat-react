@@ -23,3 +23,13 @@ export const subcribeUserDisconnect = callback => {
     return callback(null, userId);
   });
 };
+
+export const subcribeCreateMessage = callback => {
+  socket.on('create-message', message => {
+    return callback(null, message);
+  });
+};
+
+export const socketSendMessage = message => {
+  socket.emit('message', message);
+};

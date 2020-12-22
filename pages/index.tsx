@@ -17,7 +17,7 @@ export default function Home() {
       window.location.port ? `:${window.location.port}` : ''
     }`;
     setPageUrl(fullUrl);
-  }, [window.location.hostname]);
+  }, []);
 
   useEffect(() => {
     if (!myVideoEl) {

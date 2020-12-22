@@ -120,16 +120,14 @@ const RoomPage: React.FC = () => {
     console.log('Adicionando video');
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
-    videoElement.addEventListener('loadedmetadata', async () => {
-      console.log('Evento loadedmetadata');
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
-      videoGridElement.append(videoElement);
-      console.log('Incluindo na grid');
-      if (gridCol < 3) {
-        setGridCol(gridCol + 1);
-      }
-    });
+    console.log('Evento loadedmetadata');
+    videoElement.play();
+    const videoGridElement = gridVideoEl.current;
+    videoGridElement.append(videoElement);
+    console.log('Incluindo na grid');
+    if (gridCol < 3) {
+      setGridCol(gridCol + 1);
+    }
   };
 
   const handleSendMessage = () => {

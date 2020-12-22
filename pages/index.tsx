@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 export default function Home() {
   const myVideoEl = useRef(null);
   const [pageUrl, setPageUrl] = useState('');
+  const [disableButton, setDisableButton] = useState(false);
   const [myCodeRoom, setMyCodeRoomUrlRoom] = useState('');
   const urlRoom = `${pageUrl}/${myCodeRoom}`;
 
@@ -30,6 +31,9 @@ export default function Home() {
         video.srcObject = stream;
         video.play();
         video.muted = true;
+      })
+      .catch(() => {
+        setDisableButton(true);
       });
   }, [myVideoEl]);
 
@@ -56,12 +60,22 @@ export default function Home() {
             </p>
             <div className="flex flex-col gap-10 justify-center justify-items-center">
               <div className="rounded-md shadow">
-                <a
-                  href={urlRoom}
-                  className="flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 md:py-4 md:text-lg md:px-10"
-                >
-                  Entrar na sala
-                </a>
+                {disableButton && (
+                  <a
+                    href="/"
+                    className="pointer-events-none cursor-not-allowed flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-gray-300 bg-gray-500  md:py-4 md:text-lg md:px-10"
+                  >
+                    Necessário permissão de camera
+                  </a>
+                )}
+                {!disableButton && (
+                  <a
+                    href={urlRoom}
+                    className=" flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 md:py-4 md:text-lg md:px-10"
+                  >
+                    Entrar na sala
+                  </a>
+                )}
               </div>
 
               <form className="shadow rounded-lg flex items-center justify-center ">
@@ -69,12 +83,23 @@ export default function Home() {
                   className="w-full h-full rounded-l-lg p-4 mr-0 text-gray-800 border-gray-200 bg-white outline-none "
                   placeholder="Digite o codigo ou link"
                 />
-                <button
-                  type="submit"
-                  className="text-white text-base font-medium rounded-r-lg bg-blue-500 p-4 border-blue-500 border-t border-b border-r md:text-lg"
-                >
-                  Participar
-                </button>
+                {disableButton && (
+                  <button
+                    type="submit"
+                    disabled
+                    className="cursor-not-allowed text-gray-300 text-base font-medium rounded-r-lg bg-gray-500 p-4 border-gray-500 border-t border-b border-r md:text-lg"
+                  >
+                    Participar
+                  </button>
+                )}
+                {!disableButton && (
+                  <button
+                    type="submit"
+                    className="text-white text-base font-medium rounded-r-lg bg-blue-500 p-4 border-blue-500 border-t border-b border-r md:text-lg"
+                  >
+                    Participar
+                  </button>
+                )}
               </form>
             </div>
           </div>

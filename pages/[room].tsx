@@ -1,12 +1,80 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRouter } from 'next/dist/client/router';
+import React, { useRef, useEffect, useState, VideoHTMLAttributes } from 'react';
+import { getMyMediaWebCam } from '../services/navegatorMedia';
+import { openPeer, peerCall, subscribeCall } from '../services/webpeers';
+import {
+  subcribeUserConnect,
+  subcribeUserDisconnect,
+} from '../services/websocket';
 
-// import { Container } from './styles';
+const peers = {};
 
 const RoomPage: React.FC = () => {
   const myVideoEl = useRef(null);
   const gridVideoEl = useRef(null);
-  const [gridCol, setGridCol] = useState(3);
+  const [gridCol, setGridCol] = useState(1);
+
   const videoClasses = 'object-cover h-full w-full';
+  const router = useRouter();
+  const { room } = router.query;
+
+  useEffect(() => {
+    if (!myVideoEl) {
+      return;
+    }
+    getMyMediaWebCam((err, stream) => {
+      const video = myVideoEl.current;
+      video.srcObject = stream;
+      video.play();
+      video.muted = true;
+    });
+  }, [myVideoEl]);
+
+  useEffect(() => {
+    if (room) {
+      openPeer(room);
+    }
+  }, [room]);
+
+  useEffect(() => {
+    subscribeCall((err, call) => {
+      getMyMediaWebCam((errWebCam, stream) => {
+        call.answer(stream);
+        console.log('Respondendo', stream);
+        const hostVideo = document.createElement('video');
+        hostVideo.id = call.peer;
+        peers[call.peer] = call;
+        call.on('stream', userVideoStream => {
+          addVideoStream(hostVideo, userVideoStream);
+        });
+      });
+    });
+
+    subcribeUserConnect((err, userId) => {
+      getMyMediaWebCam((errWebCam, stream) => {
+        const call = peerCall(userId, stream);
+        const newUserVideoElement = document.createElement('video');
+        newUserVideoElement.id = userId;
+        call.on('stream', userVideoStream => {
+          addVideoStream(newUserVideoElement, userVideoStream);
+        });
+        peers[userId] = call;
+      });
+    });
+
+    subcribeUserDisconnect((err, userId) => {
+      if (peers[userId]) {
+        peers[userId].close();
+        const elementDisconnected = document.getElementById(userId);
+        if (elementDisconnected) {
+          elementDisconnected.remove();
+          if (gridCol < 3) {
+            setGridCol(gridCol - 1);
+          }
+        }
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const gridVideo = gridVideoEl.current;
@@ -25,21 +93,20 @@ const RoomPage: React.FC = () => {
         setGridCol(3);
         break;
     }
-  }, [gridVideoEl]);
+  });
 
-  useEffect(() => {
-    if (!myVideoEl) {
-      return;
-    }
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        const video = myVideoEl.current;
-        video.srcObject = stream;
-        video.play();
-        video.muted = true;
-      });
-  }, [myVideoEl]);
+  const addVideoStream = (videoElement, stream) => {
+    videoElement.srcObject = stream;
+    videoElement.className += videoClasses;
+    videoElement.addEventListener('loadedmetadata', async () => {
+      await videoElement.play();
+      const videoGridElement = gridVideoEl.current;
+      videoGridElement.append(videoElement);
+      if (gridCol < 3) {
+        setGridCol(gridCol + 1);
+      }
+    });
+  };
 
   return (
     <div className="flex flex-row h-screen max-h-screen w-screen max-w-screen">

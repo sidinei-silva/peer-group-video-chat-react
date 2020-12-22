@@ -18,16 +18,18 @@ if (typeof window !== 'undefined') {
   });
 }
 
+export const showAllPeers = () => {
+  return myPeer;
+};
+
 export const openPeer = room => {
   myPeer.on('open', id => {
-    console.log('Meu id:', id);
     joinRoom(room, id);
   });
 };
 
 export const subscribeCall = callback => {
   myPeer.on('call', call => {
-    console.log('Ouvindo call', call);
     return callback(null, call);
   });
 };

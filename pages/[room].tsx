@@ -1,7 +1,12 @@
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState } from 'react';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
-import { openPeer, peerCall, subscribeCall } from '../services/webpeers';
+import {
+  openPeer,
+  peerCall,
+  showAllPeers,
+  subscribeCall,
+} from '../services/webpeers';
 import {
   socketSendMessage,
   subcribeCreateMessage,
@@ -28,9 +33,6 @@ const RoomPage: React.FC = () => {
     getMyMediaWebCam((err, stream) => {
       const video = myVideoEl.current;
       video.srcObject = stream;
-      video.onloadedmetadata = function () {
-        console.log('Video do host carregado', video);
-      };
       video.play();
       video.muted = true;
     });
@@ -46,7 +48,6 @@ const RoomPage: React.FC = () => {
     subscribeCall((err, call) => {
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
-        console.log('Respondendo', stream);
         const hostVideo = document.createElement('video');
         hostVideo.id = call.peer;
         peers[call.peer] = call;
@@ -63,7 +64,6 @@ const RoomPage: React.FC = () => {
         newUserVideoElement.id = userId;
         call.on('stream', userVideoStream => {
           addVideoStream(newUserVideoElement, userVideoStream);
-          console.log('Usuario adicionado', userVideoStream);
         });
         peers[userId] = call;
       });
@@ -95,6 +95,10 @@ const RoomPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    console.log(showAllPeers());
+  });
+
+  useEffect(() => {
     const gridVideo = gridVideoEl.current;
     switch (gridVideo.children.length) {
       case 0:
@@ -120,17 +124,14 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (videoElement, stream) => {
-    console.log('Adicionando video');
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
-
-    videoElement.play();
     const videoGridElement = gridVideoEl.current;
     videoGridElement.append(videoElement);
-    console.log('Incluindo na');
     if (gridCol < 3) {
       setGridCol(gridCol + 1);
     }
+    videoElement.play();
   };
 
   const handleSendMessage = () => {

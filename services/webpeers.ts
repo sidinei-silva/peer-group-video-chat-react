@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
 }
 
 export const showAllPeers = () => {
-  return myPeer;
+  return myPeer.connections;
 };
 
 export const openPeer = room => {

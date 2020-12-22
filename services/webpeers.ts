@@ -4,15 +4,17 @@ let Peer;
 let myPeer;
 
 const peerHost = process.env.PEER_URL;
-const peerPort = process.env.PEER_PORT;
+const peerPort = process.env.PEER_PORT || 5000;
 
 if (typeof window !== 'undefined') {
   const { Peer: PeerGlobal }: any = window;
   Peer = PeerGlobal;
+  const securePeer = peerPort === '443';
   myPeer = new Peer(undefined, {
     path: '/peerjs',
     host: peerHost,
     port: peerPort,
+    secure: securePeer,
   });
 }
 

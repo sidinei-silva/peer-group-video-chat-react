@@ -140,14 +140,18 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (videoElement, stream) => {
+    const video = myVideoEl.current;
+    const videoGridElement = gridVideoEl.current;
+    videoGridElement.innerHTML = '';
+    videoGridElement.append(video);
     const connectionsPeers = Object.values(showAllPeers());
     connectionsPeers.forEach((connection: any) => {
       connection.forEach(peerConnection => {
         const newUserVideoElement = document.createElement('video');
         newUserVideoElement.id = peerConnection.peer;
-        newUserVideoElement.srcObject = peerConnection.localStream;
+        newUserVideoElement.srcObject = peerConnection.remoteStream;
         newUserVideoElement.className += videoClasses;
-        const videoGridElement = gridVideoEl.current;
+
         videoGridElement.append(newUserVideoElement);
         if (gridCol < 3) {
           setGridCol(gridCol + 1);

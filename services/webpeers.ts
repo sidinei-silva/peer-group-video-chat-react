@@ -18,8 +18,8 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export const showAllPeers = () => {
-  return myPeer.connections;
+export const showPeer = () => {
+  return myPeer;
 };
 
 export const openPeer = room => {

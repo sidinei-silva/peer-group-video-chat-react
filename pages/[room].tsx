@@ -4,7 +4,7 @@ import { getMyMediaWebCam } from '../services/navegatorMedia';
 import {
   openPeer,
   peerCall,
-  showAllPeers,
+  showPeer,
   subscribeCall,
 } from '../services/webpeers';
 import {
@@ -66,6 +66,8 @@ const RoomPage: React.FC = () => {
           addVideoStream(newUserVideoElement, userVideoStream);
         });
         peers[userId] = call;
+        console.log('Peers: ', peers);
+        console.log('Variable Global myPeers: ', showPeer());
       });
     });
 
@@ -95,26 +97,6 @@ const RoomPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (showAllPeers()) {
-      const connectionsPeers = Object.values(showAllPeers());
-      connectionsPeers.forEach((connection: any) => {
-        connection.forEach(peerConnection => {
-          const newUserVideoElement = document.createElement('video');
-          newUserVideoElement.id = peerConnection.peer;
-          newUserVideoElement.srcObject = peerConnection.localStream;
-          newUserVideoElement.className += videoClasses;
-          const videoGridElement = gridVideoEl.current;
-          videoGridElement.append(newUserVideoElement);
-          if (gridCol < 3) {
-            setGridCol(gridCol + 1);
-          }
-          newUserVideoElement.play();
-        });
-      });
-    }
-  });
-
-  useEffect(() => {
     const gridVideo = gridVideoEl.current;
     switch (gridVideo.children.length) {
       case 0:
@@ -140,33 +122,18 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (videoElement, stream) => {
-    const video = myVideoEl.current;
-    const videoGridElement = gridVideoEl.current;
-    videoGridElement.innerHTML = '';
-    videoGridElement.append(video);
-    const connectionsPeers = Object.values(showAllPeers());
-    connectionsPeers.forEach((connection: any) => {
-      connection.forEach(peerConnection => {
-        const newUserVideoElement = document.createElement('video');
-        newUserVideoElement.id = peerConnection.peer;
-        newUserVideoElement.srcObject = peerConnection.remoteStream;
-        newUserVideoElement.className += videoClasses;
-
-        videoGridElement.append(newUserVideoElement);
-        if (gridCol < 3) {
-          setGridCol(gridCol + 1);
-        }
-        newUserVideoElement.play();
-      });
+    videoElement.srcObject = stream;
+    videoElement.className += videoClasses;
+    console.log('Adicionando stream', stream);
+    videoElement.addEventListener('loadedmetadata', () => {
+      console.log('Evento loadedmetadata');
+      videoElement.play();
+      const videoGridElement = gridVideoEl.current;
+      videoGridElement.append(videoElement);
+      if (gridCol < 3) {
+        setGridCol(gridCol + 1);
+      }
     });
-    // videoElement.srcObject = stream;
-    // videoElement.className += videoClasses;
-    // const videoGridElement = gridVideoEl.current;
-    // videoGridElement.append(videoElement);
-    // if (gridCol < 3) {
-    //   setGridCol(gridCol + 1);
-    // }
-    // videoElement.play();
   };
 
   const handleSendMessage = () => {

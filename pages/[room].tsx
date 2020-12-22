@@ -59,8 +59,8 @@ const RoomPage: React.FC = () => {
         const newUserVideoElement = document.createElement('video');
         newUserVideoElement.id = userId;
         call.on('stream', userVideoStream => {
-          console.log(userVideoStream);
           addVideoStream(newUserVideoElement, userVideoStream);
+          console.log('Usuario adicionado', userVideoStream);
         });
         peers[userId] = call;
       });

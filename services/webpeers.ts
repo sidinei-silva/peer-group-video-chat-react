@@ -24,6 +24,7 @@ export const showAllPeers = () => {
 
 export const openPeer = room => {
   myPeer.on('open', id => {
+    console.log(id);
     joinRoom(room, id);
   });
 };

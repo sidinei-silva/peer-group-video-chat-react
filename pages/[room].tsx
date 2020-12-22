@@ -28,6 +28,9 @@ const RoomPage: React.FC = () => {
     getMyMediaWebCam((err, stream) => {
       const video = myVideoEl.current;
       video.srcObject = stream;
+      video.onloadedmetadata = function () {
+        console.log('Video do visitante carregado', video);
+      };
       video.play();
       video.muted = true;
     });
@@ -120,6 +123,11 @@ const RoomPage: React.FC = () => {
     console.log('Adicionando video');
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
+
+    videoElement.onloadedmetadata = function () {
+      console.log('Video do visitante carregado', videoElement);
+    };
+
     videoElement.addEventListener('loadedmetadata', () => {
       console.log('Evento loadedmetadata');
       videoElement.play();

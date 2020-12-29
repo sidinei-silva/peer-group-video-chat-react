@@ -6,9 +6,9 @@ const socket = io(process.env.SOCKET_URL, {
   },
 });
 
-export const joinRoom = (room, userId) => {
+export const joinRoom = (room, userId, name) => {
   if (socket && room) {
-    socket.emit('join-room', room, userId);
+    socket.emit('join-room', room, userId, name);
   }
 };
 
@@ -25,11 +25,11 @@ export const subcribeUserDisconnect = callback => {
 };
 
 export const subcribeCreateMessage = callback => {
-  socket.on('create-message', message => {
-    return callback(null, message);
+  socket.on('create-message', ({ name, message }) => {
+    return callback(null, name, message);
   });
 };
 
-export const socketSendMessage = message => {
-  socket.emit('message', message);
+export const socketSendMessage = (name, message) => {
+  socket.emit('message', { name, message });
 };

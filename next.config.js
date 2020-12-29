@@ -4,4 +4,5 @@ module.exports = {
     PEER_URL: process.env.PEER_URL,
     PEER_PORT: process.env.PEER_PORT,
   },
+  distDir: 'build',
 };

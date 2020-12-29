@@ -55,6 +55,7 @@ export default function Home() {
             <p className="text-center text-2xl leading-normal">
               Entre na sala ou digite o código
             </p>
+
             <p className="mt-3 p-3 bg-gray-100 text-base text-center">
               {urlRoom}
             </p>

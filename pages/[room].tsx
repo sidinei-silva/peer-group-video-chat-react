@@ -21,10 +21,19 @@ const RoomPage: React.FC = () => {
   const gridVideoEl = useRef(null);
   const [gridCol, setGridCol] = useState(1);
   const [inputMessage, setInputMessage] = useState('');
+  const [name, setName] = useState('');
+  const [modal, setModal] = useState(true);
 
   const videoClasses = 'object-cover h-full w-full';
   const router = useRouter();
   const { room } = router.query;
+
+  const enterRoom = () => {
+    if (room && modal && name.length > 0) {
+      setModal(false);
+      openPeer({ room, name });
+    }
+  };
 
   useEffect(() => {
     if (!myVideoEl) {
@@ -39,12 +48,9 @@ const RoomPage: React.FC = () => {
   }, [myVideoEl]);
 
   useEffect(() => {
-    if (room) {
-      openPeer(room);
+    if (modal) {
+      return;
     }
-  }, [room]);
-
-  useEffect(() => {
     subscribeCall((err, call) => {
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
@@ -84,17 +90,25 @@ const RoomPage: React.FC = () => {
       }
     });
 
-    subcribeCreateMessage((err, message) => {
+    subcribeCreateMessage((err, autorName, message) => {
       const chatList = document.getElementById('chat-list');
       const messageItem = document.createElement('li');
+
+      const autorMessage = document.createElement('p');
+      autorMessage.className += 'text-xs font-bold';
+      const autorText = document.createTextNode(autorName);
+      autorMessage.append(autorText);
+      messageItem.append(autorMessage);
+
       messageItem.className += 'p-1 px-3 text-sm';
       const itemText = document.createTextNode(message);
       messageItem.append(itemText);
+
       chatList.append(messageItem);
       const windowsChat = document.getElementById('windows-chat');
       windowsChat.scrollTop = windowsChat.scrollHeight;
     });
-  }, []);
+  }, [modal]);
 
   useEffect(() => {
     const gridVideo = gridVideoEl.current;
@@ -147,7 +161,7 @@ const RoomPage: React.FC = () => {
       const windowsChat = document.getElementById('windows-chat');
       windowsChat.scrollTop = windowsChat.scrollHeight;
 
-      socketSendMessage(inputMessage);
+      socketSendMessage(name, inputMessage);
       setInputMessage('');
     }
   };
@@ -200,6 +214,61 @@ const RoomPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {modal && (
+        <div className="fixed z-10 inset-0 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 transition-opacity"
+              aria-hidden="true"
+            >
+              <div className="absolute inset-0 bg-gray-500 opacity-75" />
+            </div>
+
+            <span
+              className="hidden sm:inline-block sm:align-middle sm:h-screen"
+              aria-hidden="true"
+            >
+              &#8203;
+            </span>
+
+            <div
+              className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-headline"
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                  <h3
+                    className="text-lg leading-6 font-medium text-gray-900"
+                    id="modal-headline"
+                  >
+                    Necessário nome de usuário
+                  </h3>
+                  <div className="mt-2 w-full">
+                    <input
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      id="name"
+                      className="shadow w-full h-full rounded-lg p-4 mr-0 text-gray-800 border-gray-200 bg-white outline-none "
+                      placeholder="Insira seu nome"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={enterRoom}
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Entrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

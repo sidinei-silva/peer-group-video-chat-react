@@ -33,3 +33,13 @@ export const subcribeCreateMessage = callback => {
 export const socketSendMessage = (name, message) => {
   socket.emit('message', { name, message });
 };
+
+export const subcribeToggleHandUp = callback => {
+  socket.on('toggle-hand-up', ({ userId, isHandUp }) => {
+    return callback(null, userId, isHandUp);
+  });
+};
+
+export const handUp = (userId, isHandUp) => {
+  socket.emit('hand-up', { userId, isHandUp });
+};

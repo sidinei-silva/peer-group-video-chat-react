@@ -15,7 +15,7 @@ const createMyPeer = () => {
       path: '/peerjs',
       host: peerHost,
       port: peerPort,
-      secure: securePeer,
+      secure: false,
       config: {
         iceServers: [
           { url: 'stun:108.177.98.127:19302' },

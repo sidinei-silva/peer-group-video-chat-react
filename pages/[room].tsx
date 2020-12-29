@@ -1,20 +1,35 @@
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState } from 'react';
+import { IoHandRightOutline, IoHandRightSharp } from 'react-icons/io5';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
 import {
+  myPeerId,
   openPeer,
   peerCall,
   showPeer,
   subscribeCall,
 } from '../services/webpeers';
 import {
+  handUp,
   socketSendMessage,
   subcribeCreateMessage,
+  subcribeToggleHandUp,
   subcribeUserConnect,
   subcribeUserDisconnect,
 } from '../services/websocket';
 
 const peers = {};
+
+const svgHand = `<svg
+stroke="currentColor"
+fill="currentColor"
+strokeWidth="0"
+viewBox="0 0 512 512"
+className="text-blue-500"
+xmlns="http://www.w3.org/2000/svg"
+>
+<path d="M82.42 209.08c15.06-6.62 32.38 1.31 38.5 17.62L156 312h11.27V80c0-17.6 13.3-32 29.55-32 16.26 0 29.55 14.4 29.55 32v151.75l14.78.25V32c0-17.6 13.3-32 29.55-32 16.3 0 29.55 14.4 29.55 32v199.75L315 232V64c0-17.6 13.3-32 29.55-32 16.26 0 29.55 14.4 29.55 32v183.75l14.78.25V128c0-17.6 13.3-32 29.55-32C434.7 96 448 110.4 448 128v216c0 75.8-37.13 168-169 168-40.8 0-79.42-7-100.66-21a121.41 121.41 0 01-33.72-33.31 138 138 0 01-16-31.78L66.16 250.77c-6.11-16.31 1.2-35.06 16.26-41.69z" />
+</svg>`;
 
 const RoomPage: React.FC = () => {
   const myVideoEl = useRef(null);
@@ -23,8 +38,9 @@ const RoomPage: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [name, setName] = useState('');
   const [modal, setModal] = useState(true);
+  const [myHandUp, setMyHandup] = useState(false);
 
-  const videoClasses = 'object-cover h-full w-full';
+  const videoClasses = 'object-cover h-full w-full relative';
   const router = useRouter();
   const { room } = router.query;
 
@@ -54,11 +70,35 @@ const RoomPage: React.FC = () => {
     subscribeCall((err, call) => {
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
+
+        const divElVideo = document.createElement('div');
+        divElVideo.className += 'relative';
+        divElVideo.id = call.peer;
+
         const hostVideo = document.createElement('video');
-        hostVideo.id = call.peer;
+
+        divElVideo.appendChild(hostVideo);
+
+        const containerHand = document.createElement('div');
+        containerHand.className +=
+          'rounded-lg bg-white p-1 w-12 absolute bottom-0 right-0';
+
+        containerHand.id = `handle-${call.peer}`;
+        containerHand.style.display = 'none';
+
+        const hand = document.createElement('div');
+
+        hand.innerHTML += svgHand;
+
+        hand.className += 'text-blue-500 h-10 w-10';
+        containerHand.appendChild(hand);
+
+        divElVideo.appendChild(containerHand);
+
         peers[call.peer] = call;
+
         call.on('stream', userVideoStream => {
-          addVideoStream(hostVideo, userVideoStream);
+          addVideoStream(divElVideo, hostVideo, userVideoStream);
         });
       });
     });
@@ -66,14 +106,36 @@ const RoomPage: React.FC = () => {
     subcribeUserConnect((err, userId) => {
       getMyMediaWebCam((errWebCam, stream) => {
         const call = peerCall(userId, stream);
+
+        const divElVideo = document.createElement('div');
+        divElVideo.className += 'relative';
+        divElVideo.id = userId;
+
         const newUserVideoElement = document.createElement('video');
-        newUserVideoElement.id = userId;
+
+        divElVideo.appendChild(newUserVideoElement);
+
+        const containerHand = document.createElement('div');
+        containerHand.className +=
+          'rounded-lg bg-white p-1 w-12 absolute bottom-0 right-0';
+
+        containerHand.id = `handle-${userId}`;
+        containerHand.style.display = 'none';
+
+        const hand = document.createElement('div');
+
+        hand.innerHTML += svgHand;
+
+        hand.className += 'text-blue-500 h-10 w-10';
+
+        containerHand.appendChild(hand);
+
+        divElVideo.appendChild(containerHand);
+
         call.on('stream', userVideoStream => {
-          addVideoStream(newUserVideoElement, userVideoStream);
+          addVideoStream(divElVideo, newUserVideoElement, userVideoStream);
         });
         peers[userId] = call;
-        console.log('Peers: ', peers);
-        console.log('Variable Global myPeers: ', showPeer());
       });
     });
 
@@ -108,6 +170,15 @@ const RoomPage: React.FC = () => {
       const windowsChat = document.getElementById('windows-chat');
       windowsChat.scrollTop = windowsChat.scrollHeight;
     });
+
+    subcribeToggleHandUp((err, userId, isHandUp) => {
+      const handleUser = document.getElementById(`handle-${userId}`);
+      if (isHandUp) {
+        handleUser.style.display = 'block';
+      } else {
+        handleUser.style.display = 'none';
+      }
+    });
   }, [modal]);
 
   useEffect(() => {
@@ -135,15 +206,16 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const addVideoStream = (videoElement, stream) => {
+  const addVideoStream = (divElVideo, videoElement, stream) => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
-    console.log('Adicionando stream', stream);
-    videoElement.addEventListener('loadedmetadata', () => {
-      console.log('Evento loadedmetadata');
-      videoElement.play();
+
+    videoElement.addEventListener('loadedmetadata', async () => {
+      await videoElement.play();
       const videoGridElement = gridVideoEl.current;
-      videoGridElement.append(videoElement);
+
+      videoGridElement.append(divElVideo);
+
       if (gridCol < 3) {
         setGridCol(gridCol + 1);
       }
@@ -166,24 +238,60 @@ const RoomPage: React.FC = () => {
     }
   };
 
+  const handleMyHand = () => {
+    const myId = myPeerId();
+    handUp(myId, !myHandUp);
+    return myHandUp ? setMyHandup(false) : setMyHandup(true);
+  };
+
   return (
     <div className="flex flex-row h-screen max-h-screen w-screen max-w-screen">
-      <div
-        ref={gridVideoEl}
-        className={`bg-black w-full grid grid-flow-row grid-cols-${gridCol} gap-4`}
-      >
-        <video className={videoClasses} ref={myVideoEl}>
-          <track kind="captions" srcLang="pt-BR" />
-        </video>
+      <div className="w-full h-full flex flex-col">
+        <div
+          ref={gridVideoEl}
+          className={`bg-black h-full grid grid-flow-row grid-cols-${gridCol} gap-4`}
+        >
+          <div className="relative">
+            <video className={videoClasses} ref={myVideoEl}>
+              <track kind="captions" srcLang="pt-BR" />
+            </video>
+            {myHandUp && (
+              <div className="rounded-lg opacity-1 bg-white p-1 w-12 absolute bottom-0 right-0">
+                <svg
+                  stroke="currentColor"
+                  fill="currentColor"
+                  strokeWidth="0"
+                  viewBox="0 0 512 512"
+                  className="text-blue-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M82.42 209.08c15.06-6.62 32.38 1.31 38.5 17.62L156 312h11.27V80c0-17.6 13.3-32 29.55-32 16.26 0 29.55 14.4 29.55 32v151.75l14.78.25V32c0-17.6 13.3-32 29.55-32 16.3 0 29.55 14.4 29.55 32v199.75L315 232V64c0-17.6 13.3-32 29.55-32 16.26 0 29.55 14.4 29.55 32v183.75l14.78.25V128c0-17.6 13.3-32 29.55-32C434.7 96 448 110.4 448 128v216c0 75.8-37.13 168-169 168-40.8 0-79.42-7-100.66-21a121.41 121.41 0 01-33.72-33.31 138 138 0 01-16-31.78L66.16 250.77c-6.11-16.31 1.2-35.06 16.26-41.69z" />
+                </svg>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="w-full h-16 p-2 bg-white flex flex-row justify-center">
+          <button
+            onClick={handleMyHand}
+            type="button"
+            className="h-full hover:border-blue-500"
+          >
+            {myHandUp ? (
+              <IoHandRightSharp size="2rem" className="text-blue-500" />
+            ) : (
+              <IoHandRightOutline size="2rem" className="text-blue-500" />
+            )}
+          </button>
+        </div>
       </div>
+
       <div className="bg-white w-100">
         <div className="border-b-2 h-16 text-center flex justify-center p-2">
           <h4 className=" font-bold text-xl">Chat</h4>
         </div>
-        <div className="h-5/6">
-          <div id="windows-chat" className="flex-grow overflow-y-auto">
-            <ul id="chat-list" className="list-none" />
-          </div>
+        <div id="windows-chat" className="h-5/6 flex-grow overflow-y-auto">
+          <ul id="chat-list" className="list-none" />
         </div>
         <div className="border-t-2 border-gray-200 px-1 pt-4">
           <div className="relative">

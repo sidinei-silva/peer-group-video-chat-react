@@ -39,7 +39,6 @@ export const openPeer = ({ room, name }) => {
 
   if (myPeer) {
     myPeer.on('open', id => {
-      console.log(id);
       joinRoom(room, id, name);
     });
   }
@@ -55,4 +54,8 @@ export const subscribeCall = callback => {
 
 export const peerCall = (userId, stream) => {
   return myPeer.call(userId, stream);
+};
+
+export const myPeerId = () => {
+  return myPeer.id;
 };

@@ -24,17 +24,20 @@ export default function Home() {
     if (!myVideoEl) {
       return;
     }
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        const video = myVideoEl.current;
-        video.srcObject = stream;
-        video.play();
-        video.muted = true;
-      })
-      .catch(() => {
-        setDisableButton(true);
-      });
+
+    if (typeof navigator !== 'undefined') {
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          const video = myVideoEl.current;
+          video.srcObject = stream;
+          video.play();
+          video.muted = true;
+        })
+        .catch(() => {
+          setDisableButton(true);
+        });
+    }
   }, [myVideoEl]);
 
   return (

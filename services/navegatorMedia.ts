@@ -1,5 +1,5 @@
 export const getMyMediaWebCam = callback => {
-  if (typeof window !== 'undefined') {
+  if (typeof navigator !== 'undefined') {
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then(stream => {

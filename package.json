@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 8000",
+    "start": "next start",
     "export": "npm run build && next export -o _static"
   },
   "dependencies": {

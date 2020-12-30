@@ -9,8 +9,12 @@
     "export": "npm run build && next export -o _static"
   },
   "dependencies": {
+    "@chakra-ui/react": "^1.1.0",
+    "@emotion/react": "^11.1.4",
+    "@emotion/styled": "^11.0.0",
     "autoprefixer": "^10.1.0",
     "dotenv": "^8.2.0",
+    "framer-motion": "^3.1.1",
     "next": "10.0.3",
     "postcss": "^8.2.1",
     "react": "17.0.1",

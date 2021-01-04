@@ -43,3 +43,23 @@ export const subcribeToggleHandUp = callback => {
 export const handUp = (userId, isHandUp) => {
   socket.emit('hand-up', { userId, isHandUp });
 };
+
+export const socketSendNotification = notification => {
+  socket.emit('notification', { notification });
+};
+
+export const subcribeCreateNotification = callback => {
+  socket.on('create-notification', ({ notification }) => {
+    return callback(null, notification);
+  });
+};
+
+export const subcribeToggleMute = callback => {
+  socket.on('toggle-mute', ({ userId, isMute }) => {
+    return callback(null, userId, isMute);
+  });
+};
+
+export const sendMute = (userId, isMute) => {
+  socket.emit('mute', { userId, isMute });
+};

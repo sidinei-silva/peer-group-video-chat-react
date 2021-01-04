@@ -29,7 +29,11 @@ import {
 } from '@chakra-ui/react';
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+
+import ReactDOM from 'react-dom';
+
 import { IoHandRightOutline, IoHandRightSharp } from 'react-icons/io5';
+import { AiOutlineAudioMuted, AiOutlineAudio } from 'react-icons/ai';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
 import {
   myPeerId,
@@ -40,10 +44,12 @@ import {
 } from '../services/webpeers';
 import {
   handUp,
+  sendMute,
   socketSendMessage,
   subcribeCreateMessage,
   subcribeCreateNotification,
   subcribeToggleHandUp,
+  subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
 } from '../services/websocket';
@@ -76,6 +82,7 @@ const RoomPage: React.FC = () => {
   const [name, setName] = useState('');
   const [modal, setModal] = useState(true);
   const [myHandUp, setMyHandup] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
 
   const videoClasses = 'object-cover h-full w-full relative';
@@ -123,24 +130,13 @@ const RoomPage: React.FC = () => {
         divElVideo.id = call.peer;
 
         const hostVideo = document.createElement('video');
+        hostVideo.id = `video-${call.peer}`;
+
+        const videoStatusElement = createVideoStatusElement(call.peer);
+
+        ReactDOM.render(videoStatusElement, divElVideo);
 
         divElVideo.appendChild(hostVideo);
-
-        const containerHand = document.createElement('div');
-        containerHand.className +=
-          'rounded-lg bg-white p-1 w-12 absolute bottom-0 right-0';
-
-        containerHand.id = `handle-${call.peer}`;
-        containerHand.style.display = 'none';
-
-        const hand = document.createElement('div');
-
-        hand.innerHTML += svgHand;
-
-        hand.className += 'text-blue-500 h-10 w-10';
-        containerHand.appendChild(hand);
-
-        divElVideo.appendChild(containerHand);
 
         peers[call.peer] = call;
 
@@ -159,25 +155,13 @@ const RoomPage: React.FC = () => {
         divElVideo.id = userId;
 
         const newUserVideoElement = document.createElement('video');
+        newUserVideoElement.id = `video-${userId}`;
+
+        const videoStatusElement = createVideoStatusElement(userId);
+
+        ReactDOM.render(videoStatusElement, divElVideo);
 
         divElVideo.appendChild(newUserVideoElement);
-
-        const containerHand = document.createElement('div');
-        containerHand.className +=
-          'rounded-lg bg-white p-1 w-12 absolute bottom-0 right-0';
-
-        containerHand.id = `handle-${userId}`;
-        containerHand.style.display = 'none';
-
-        const hand = document.createElement('div');
-
-        hand.innerHTML += svgHand;
-
-        hand.className += 'text-blue-500 h-10 w-10';
-
-        containerHand.appendChild(hand);
-
-        divElVideo.appendChild(containerHand);
 
         call.on('stream', userVideoStream => {
           addVideoStream(divElVideo, newUserVideoElement, userVideoStream);
@@ -209,6 +193,22 @@ const RoomPage: React.FC = () => {
         handleUser.style.display = 'block';
       } else {
         handleUser.style.display = 'none';
+      }
+    });
+
+    subcribeToggleMute((err, userId, isMutedParamns) => {
+      const mutedUser = document.getElementById(`microphone-${userId}`);
+
+      const videoUser = document.getElementById(`video-${userId}`);
+
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      videoUser.muted = isMutedParamns;
+
+      if (isMutedParamns) {
+        mutedUser.style.display = 'block';
+      } else {
+        mutedUser.style.display = 'none';
       }
     });
 
@@ -262,16 +262,20 @@ const RoomPage: React.FC = () => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
-    videoElement.addEventListener('loadedmetadata', async () => {
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
+    videoElement.addEventListener(
+      'loadedmetadata',
+      async () => {
+        await videoElement.play();
+        const videoGridElement = gridVideoEl.current;
 
-      videoGridElement.append(divElVideo);
+        videoGridElement.append(divElVideo);
 
-      if (gridCol < 3) {
-        setGridCol(gridCol + 1);
-      }
-    });
+        if (gridCol < 3) {
+          setGridCol(gridCol + 1);
+        }
+      },
+      { once: true },
+    );
   };
 
   const handleSendMessage = () => {
@@ -297,6 +301,45 @@ const RoomPage: React.FC = () => {
     return myHandUp ? setMyHandup(false) : setMyHandup(true);
   };
 
+  const handleIsMuted = () => {
+    const myId = myPeerId();
+    sendMute(myId, !isMuted);
+    return isMuted ? setIsMuted(false) : setIsMuted(true);
+  };
+
+  const createVideoStatusElement = userId => {
+    return (
+      <HStack
+        position="absolute"
+        bottom={0}
+        right={0}
+        padding="0.5rem"
+        zIndex={2}
+      >
+        <Box backgroundColor="white" borderRadius="0.5rem">
+          <Box
+            id={`handle-${userId}`}
+            display="none"
+            padding="0.25rem"
+            size="3rem"
+            color="#3182ce"
+            as={IoHandRightSharp}
+          />
+        </Box>
+        <Box backgroundColor="white" borderRadius="0.5rem">
+          <Box
+            id={`microphone-${userId}`}
+            display="none"
+            padding="0.25rem"
+            size="3rem"
+            color="#E53E3E"
+            as={AiOutlineAudioMuted}
+          />
+        </Box>
+      </HStack>
+    );
+  };
+
   return (
     <>
       <Container maxWidth="100%" height="100vh" p={2}>
@@ -314,23 +357,36 @@ const RoomPage: React.FC = () => {
                   <video className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
                   </video>
-                  {myHandUp && (
-                    <div className="rounded-lg opacity-1 bg-white p-1 w-12 absolute bottom-0 right-0">
-                      <svg
-                        stroke="currentColor"
-                        fill="currentColor"
-                        strokeWidth="0"
-                        viewBox="0 0 512 512"
-                        className="text-blue-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M82.42 209.08c15.06-6.62 32.38 1.31 38.5 17.62L156 312h11.27V80c0-17.6 13.3-32 29.55-32 16.26 0 29.55 14.4 29.55 32v151.75l14.78.25V32c0-17.6 13.3-32 29.55-32 16.3 0 29.55 14.4 29.55 32v199.75L315 232V64c0-17.6 13.3-32 29.55-32 16.26 0 29.55 14.4 29.55 32v183.75l14.78.25V128c0-17.6 13.3-32 29.55-32C434.7 96 448 110.4 448 128v216c0 75.8-37.13 168-169 168-40.8 0-79.42-7-100.66-21a121.41 121.41 0 01-33.72-33.31 138 138 0 01-16-31.78L66.16 250.77c-6.11-16.31 1.2-35.06 16.26-41.69z" />
-                      </svg>
-                    </div>
-                  )}
+                  <HStack position="absolute" bottom={0} right={0} padding={2}>
+                    {myHandUp && (
+                      <Box backgroundColor="white" borderRadius="lg">
+                        <Box
+                          padding={1}
+                          size="3rem"
+                          color="blue.500"
+                          as={IoHandRightSharp}
+                        />
+                      </Box>
+                    )}
+                    {isMuted && (
+                      <Box backgroundColor="white" borderRadius="lg">
+                        <Box
+                          padding={1}
+                          size="3rem"
+                          color="red.500"
+                          as={AiOutlineAudioMuted}
+                        />
+                      </Box>
+                    )}
+                  </HStack>
                 </div>
               </Grid>
-              <Flex width="100%" p={2} backgroundColor="white" justify="center">
+              <HStack
+                width="100%"
+                p={2}
+                backgroundColor="white"
+                justify="center"
+              >
                 <Button
                   onClick={handleMyHand}
                   type="button"
@@ -345,7 +401,22 @@ const RoomPage: React.FC = () => {
                     as={myHandUp ? IoHandRightSharp : IoHandRightOutline}
                   />
                 </Button>
-              </Flex>
+
+                <Button
+                  onClick={handleIsMuted}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <Box
+                    size="2rem"
+                    color={isMuted ? 'red.500' : 'blue.500'}
+                    as={isMuted ? AiOutlineAudioMuted : AiOutlineAudio}
+                  />
+                </Button>
+              </HStack>
             </Flex>
           </Box>
           <Box width="20rem">

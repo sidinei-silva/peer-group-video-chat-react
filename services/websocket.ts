@@ -53,3 +53,13 @@ export const subcribeCreateNotification = callback => {
     return callback(null, notification);
   });
 };
+
+export const subcribeToggleMute = callback => {
+  socket.on('toggle-mute', ({ userId, isMute }) => {
+    return callback(null, userId, isMute);
+  });
+};
+
+export const sendMute = (userId, isMute) => {
+  socket.emit('mute', { userId, isMute });
+};

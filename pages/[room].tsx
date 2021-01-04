@@ -262,20 +262,16 @@ const RoomPage: React.FC = () => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
-    videoElement.addEventListener(
-      'loadedmetadata',
-      async () => {
-        await videoElement.play();
-        const videoGridElement = gridVideoEl.current;
+    videoElement.addEventListener('loadedmetadata', async () => {
+      await videoElement.play();
+      const videoGridElement = gridVideoEl.current;
 
-        videoGridElement.append(divElVideo);
+      videoGridElement.append(divElVideo);
 
-        if (gridCol < 3) {
-          setGridCol(gridCol + 1);
-        }
-      },
-      { once: true },
-    );
+      if (gridCol < 3) {
+        setGridCol(gridCol + 1);
+      }
+    });
   };
 
   const handleSendMessage = () => {

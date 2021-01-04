@@ -283,7 +283,7 @@ const RoomPage: React.FC = () => {
       <Container maxWidth="100%" height="100vh" p={2}>
         <Flex height="100%">
           <Box flex={1}>
-            <Flex direction="column">
+            <Flex direction="column" height="100%">
               <Grid
                 ref={gridVideoEl}
                 flex={1}
@@ -311,19 +311,22 @@ const RoomPage: React.FC = () => {
                   )}
                 </div>
               </Grid>
-              <div className="w-full h-16 p-2 bg-white flex flex-row justify-center">
-                <button
+              <Flex width="100%" p={2} backgroundColor="white" justify="center">
+                <Button
                   onClick={handleMyHand}
                   type="button"
-                  className="h-full hover:border-blue-500"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
                 >
-                  {myHandUp ? (
-                    <IoHandRightSharp size="2rem" className="text-blue-500" />
-                  ) : (
-                    <IoHandRightOutline size="2rem" className="text-blue-500" />
-                  )}
-                </button>
-              </div>
+                  <Box
+                    size="2rem"
+                    color="blue.500"
+                    as={myHandUp ? IoHandRightSharp : IoHandRightOutline}
+                  />
+                </Button>
+              </Flex>
             </Flex>
           </Box>
           <Box width="20rem">

@@ -25,6 +25,7 @@ import {
   outline,
   VStack,
   Container,
+  useToast,
 } from '@chakra-ui/react';
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
@@ -41,6 +42,7 @@ import {
   handUp,
   socketSendMessage,
   subcribeCreateMessage,
+  subcribeCreateNotification,
   subcribeToggleHandUp,
   subcribeUserConnect,
   subcribeUserDisconnect,
@@ -66,6 +68,7 @@ interface IChatMessage {
 }
 
 const RoomPage: React.FC = () => {
+  const toast = useToast();
   const myVideoEl = useRef(null);
   const gridVideoEl = useRef(null);
   const [gridCol, setGridCol] = useState(1);
@@ -85,6 +88,13 @@ const RoomPage: React.FC = () => {
     if (room && modal && name.length > 0) {
       setModal(false);
       openPeer({ room, name });
+      toast({
+        description: 'Bem vindx a sala!',
+        duration: 3000,
+        isClosable: true,
+        status: 'success',
+        position: 'bottom-left',
+      });
     }
   };
 
@@ -200,6 +210,15 @@ const RoomPage: React.FC = () => {
       } else {
         handleUser.style.display = 'none';
       }
+    });
+
+    subcribeCreateNotification((err, notification) => {
+      toast({
+        description: notification,
+        duration: 3000,
+        isClosable: true,
+        position: 'bottom-left',
+      });
     });
   }, [modal]);
 

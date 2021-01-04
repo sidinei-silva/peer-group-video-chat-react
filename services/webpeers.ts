@@ -19,6 +19,12 @@ const createMyPeer = () => {
       config: {
         iceServers: [
           { url: 'stun:stun.l.google.com:19302' },
+          { url: 'stun:108.177.98.127:19302' },
+          {
+            url: 'turn:turn.anyfirewall.com:443?transport=tcp',
+            credential: 'webrtc',
+            username: 'webrtc',
+          },
           {
             url: 'turn:numb.viagenie.ca',
             credential: 'muazkh',

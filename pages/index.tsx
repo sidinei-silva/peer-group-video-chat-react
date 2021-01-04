@@ -77,9 +77,11 @@ export default function Home() {
             </Box>
 
             {!disableButton && (
-              <Button boxShadow="md" py="2rem" colorScheme="blue" size="lg">
-                <a href={urlRoom}> Entrar na sala</a>
-              </Button>
+              <a href={urlRoom}>
+                <Button boxShadow="md" py="2rem" colorScheme="blue" size="lg">
+                  Entrar na sala
+                </Button>
+              </a>
             )}
 
             {disableButton && (

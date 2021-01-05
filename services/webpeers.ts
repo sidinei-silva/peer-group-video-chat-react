@@ -29,7 +29,7 @@ const createMyPeer = () => {
     //     ],
     //   },
     // });
-    myPeer = new Peer(null, { debug: 1 });
+    myPeer = new Peer(null, { debug: 2 });
   }
 };
 

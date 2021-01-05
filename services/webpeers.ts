@@ -16,6 +16,7 @@ const createMyPeer = () => {
       host: peerHost,
       port: peerPort,
       secure: securePeer,
+      debugL: 3,
       config: {
         iceServers: [
           { url: 'stun:108.177.98.127:19302' },
@@ -59,12 +60,4 @@ export const peerCall = (userId, stream) => {
 
 export const myPeerId = () => {
   return myPeer.id;
-};
-
-export const subscribePeerError = callback => {
-  myPeer.on('error', errorPeer => {
-    return callback(null, errorPeer);
-  });
-
-  return false;
 };

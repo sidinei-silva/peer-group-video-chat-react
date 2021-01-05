@@ -41,6 +41,7 @@ import {
   peerCall,
   showPeer,
   subscribeCall,
+  subscribeError,
 } from '../services/webpeers';
 import {
   handUp,
@@ -228,6 +229,11 @@ const RoomPage: React.FC = () => {
         position: 'bottom-left',
       });
     });
+
+    subscribeError((err, errorPeer) => {
+      alert(`Ocorreu um erro com o peer: ${name}`);
+      console.log(errorPeer);
+    });
   }, [modal]);
 
   useEffect(() => {
@@ -267,19 +273,18 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (divElVideo, videoElement, stream) => {
+    videoElement.autoplay = 'autoplay';
+
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
-    videoElement.addEventListener('loadedmetadata', async () => {
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
+    const videoGridElement = gridVideoEl.current;
 
-      videoGridElement.append(divElVideo);
+    videoGridElement.append(divElVideo);
 
-      if (gridCol < 3) {
-        setGridCol(gridCol + 1);
-      }
-    });
+    if (gridCol < 3) {
+      setGridCol(gridCol + 1);
+    }
   };
 
   const handleSendMessage = () => {
@@ -358,7 +363,7 @@ const RoomPage: React.FC = () => {
                 templateColumns={`repeat(${gridCol}, 1fr)`}
               >
                 <div className="relative">
-                  <video className={videoClasses} ref={myVideoEl}>
+                  <video className={videoClasses} ref={myVideoEl} autoPlay>
                     <track kind="captions" srcLang="pt-BR" />
                   </video>
                   <HStack position="absolute" bottom={0} right={0} padding={2}>

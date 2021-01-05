@@ -31,12 +31,6 @@ const createMyPeer = () => {
     // });
     myPeer = new Peer(null, {
       debug: 3,
-      config: {
-        iceServers: [
-          { url: 'stun:108.177.98.127:19302' },
-          { url: 'stun:stun.l.google.com:19302' },
-        ],
-      },
     });
   }
 };
@@ -69,4 +63,12 @@ export const peerCall = (userId, stream) => {
 
 export const myPeerId = () => {
   return myPeer.id;
+};
+
+export const subscribeError = callback => {
+  myPeer.on('error', errorPeer => {
+    return callback(null, errorPeer);
+  });
+
+  return false;
 };

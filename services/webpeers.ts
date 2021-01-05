@@ -29,7 +29,15 @@ const createMyPeer = () => {
     //     ],
     //   },
     // });
-    myPeer = new Peer(null, { debug: 2 });
+    myPeer = new Peer(null, {
+      debug: 3,
+      config: {
+        iceServers: [
+          { url: 'stun:108.177.98.127:19302' },
+          { url: 'stun:stun.l.google.com:19302' },
+        ],
+      },
+    });
   }
 };
 

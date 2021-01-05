@@ -63,3 +63,13 @@ export const subcribeToggleMute = callback => {
 export const sendMute = (userId, isMute) => {
   socket.emit('mute', { userId, isMute });
 };
+
+export const subscribeCreateDebug = callback => {
+  socket.on('create-debug', ({ messageDebug, objectDebug }) => {
+    return callback(null, messageDebug, objectDebug);
+  });
+};
+
+export const sendDebug = (messageDebug, objectDebug) => {
+  socket.emit('debug', { messageDebug, objectDebug });
+};

@@ -41,15 +41,12 @@ import {
   peerCall,
   showPeer,
   subscribeCall,
-  subscribePeerError,
 } from '../services/webpeers';
 import {
   handUp,
-  sendDebug,
   sendMute,
   socketSendMessage,
   socketSendNotification,
-  subscribeCreateDebug,
   subcribeCreateMessage,
   subcribeCreateNotification,
   subcribeToggleHandUp,
@@ -223,14 +220,6 @@ const RoomPage: React.FC = () => {
         isClosable: true,
         position: 'bottom-left',
       });
-    });
-
-    subscribePeerError((err, errorPeer) => {
-      sendDebug('Ocorreu um erro no peer', errorPeer);
-    });
-
-    subscribeCreateDebug((err, messageDebug, objectError) => {
-      console.log(messageDebug, objectError);
     });
   }, [modal]);
 

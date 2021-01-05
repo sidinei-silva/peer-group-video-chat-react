@@ -130,8 +130,6 @@ const RoomPage: React.FC = () => {
       }
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
-        socketSendNotification(`${name} Conectou video`);
-
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = call.peer;
@@ -160,8 +158,6 @@ const RoomPage: React.FC = () => {
       }
       getMyMediaWebCam((errWebCam, stream) => {
         const call = peerCall(userId, stream);
-        socketSendNotification(`${name} Conectou video`);
-
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = userId;
@@ -270,20 +266,29 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const addVideoStream = (divElVideo, videoElement, stream) => {
+  const addVideoStream = async (divElVideo, videoElement, stream) => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
-    videoElement.addEventListener('loadedmetadata', async () => {
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
+    const playPromise = videoElement.play();
 
-      videoGridElement.append(divElVideo);
+    if (playPromise !== undefined) {
+      playPromise
+        .then(_ => {
+          // Automatic playback started!
+          // Show playing UI.
+          const videoGridElement = gridVideoEl.current;
 
-      if (gridCol < 3) {
-        setGridCol(gridCol + 1);
-      }
-    });
+          videoGridElement.append(divElVideo);
+
+          if (gridCol < 3) {
+            setGridCol(gridCol + 1);
+          }
+        })
+        .catch(error => {
+          console.log(error);
+        });
+    }
   };
 
   const handleSendMessage = () => {

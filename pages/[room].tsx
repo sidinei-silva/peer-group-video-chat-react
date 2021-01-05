@@ -122,9 +122,15 @@ const RoomPage: React.FC = () => {
     if (modal) {
       return;
     }
+
     subscribeCall((err, call) => {
+      if (err) {
+        console.log(err);
+        socketSendNotification(err.message);
+      }
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
+        socketSendNotification(`${name} Conectou video`);
 
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
@@ -148,8 +154,13 @@ const RoomPage: React.FC = () => {
     });
 
     subcribeUserConnect((err, userId) => {
+      if (err) {
+        console.log(err);
+        socketSendNotification(err.message);
+      }
       getMyMediaWebCam((errWebCam, stream) => {
         const call = peerCall(userId, stream);
+        socketSendNotification(`${name} Conectou video`);
 
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';

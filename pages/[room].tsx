@@ -267,6 +267,7 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (divElVideo, videoElement, stream) => {
+    videoElement.autoplay = true;
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
@@ -277,10 +278,6 @@ const RoomPage: React.FC = () => {
     if (gridCol < 3) {
       setGridCol(gridCol + 1);
     }
-
-    videoElement.addEventListener('loadedmetadata', async () => {
-      await videoElement.play();
-    });
   };
 
   const handleSendMessage = () => {
@@ -359,7 +356,7 @@ const RoomPage: React.FC = () => {
                 templateColumns={`repeat(${gridCol}, 1fr)`}
               >
                 <div className="relative">
-                  <video className={videoClasses} ref={myVideoEl}>
+                  <video autoPlay className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
                   </video>
                   <HStack position="absolute" bottom={0} right={0} padding={2}>

@@ -131,6 +131,7 @@ const RoomPage: React.FC = () => {
       }
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
+
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = call.peer;
@@ -273,18 +274,19 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (divElVideo, videoElement, stream) => {
-    videoElement.autoplay = 'autoplay';
-
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
-    const videoGridElement = gridVideoEl.current;
+    videoElement.addEventListener('loadedmetadata', async () => {
+      await videoElement.play();
+      const videoGridElement = gridVideoEl.current;
 
-    videoGridElement.append(divElVideo);
+      videoGridElement.append(divElVideo);
 
-    if (gridCol < 3) {
-      setGridCol(gridCol + 1);
-    }
+      if (gridCol < 3) {
+        setGridCol(gridCol + 1);
+      }
+    });
   };
 
   const handleSendMessage = () => {
@@ -363,7 +365,7 @@ const RoomPage: React.FC = () => {
                 templateColumns={`repeat(${gridCol}, 1fr)`}
               >
                 <div className="relative">
-                  <video className={videoClasses} ref={myVideoEl} autoPlay>
+                  <video className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
                   </video>
                   <HStack position="absolute" bottom={0} right={0} padding={2}>

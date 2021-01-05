@@ -11,26 +11,15 @@ const createMyPeer = () => {
     const { Peer: PeerGlobal }: any = window;
     Peer = PeerGlobal;
     const securePeer = peerPort === '443';
-    // myPeer = new Peer(undefined, {
-    //   path: '/peerjs',
-    //   host: peerHost,
-    //   port: peerPort,
-    //   secure: securePeer,
-    //   debug: 3,
-    //   config: {
-    //     iceServers: [
-    //       { url: 'stun:108.177.98.127:19302' },
-    //       { url: 'stun:stun.l.google.com:19302' },
-    //       {
-    //         url: 'turn:numb.viagenie.ca',
-    //         credential: 'muazkh',
-    //         username: 'webrtc@live.com',
-    //       },
-    //     ],
-    //   },
-    // });
-    myPeer = new Peer(null, {
+    myPeer = new Peer(undefined, {
+      path: '/peerjs',
+      host: peerHost,
+      port: peerPort,
+      secure: securePeer,
       debug: 3,
+      config: {
+        iceServers: [{ url: 'stun:stun.l.google.com:19302' }],
+      },
     });
   }
 };

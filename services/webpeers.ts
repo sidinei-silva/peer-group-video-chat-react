@@ -16,7 +16,7 @@ const createMyPeer = () => {
     //   host: peerHost,
     //   port: peerPort,
     //   secure: securePeer,
-    //   debugL: 3,
+    //   debug: 3,
     //   config: {
     //     iceServers: [
     //       { url: 'stun:108.177.98.127:19302' },
@@ -29,7 +29,7 @@ const createMyPeer = () => {
     //     ],
     //   },
     // });
-    myPeer = new Peer();
+    myPeer = new Peer(null, { debug: 3 });
   }
 };
 

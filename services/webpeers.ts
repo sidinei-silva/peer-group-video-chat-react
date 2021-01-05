@@ -60,3 +60,11 @@ export const peerCall = (userId, stream) => {
 export const myPeerId = () => {
   return myPeer.id;
 };
+
+export const subscribePeerError = callback => {
+  myPeer.on('error', errorPeer => {
+    return callback(null, errorPeer);
+  });
+
+  return false;
+};

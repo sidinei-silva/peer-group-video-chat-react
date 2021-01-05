@@ -8,7 +8,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <>
       <Head>
-        <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js" />
+        <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.js" />
       </Head>
       <ChakraProvider theme={theme}>
         <Component {...pageProps} />

@@ -6,33 +6,48 @@ let myPeer;
 const peerHost = process.env.PEER_URL;
 const peerPort = process.env.PEER_PORT || 5000;
 
+const stunServer = process.env.STUN_SERVER;
+const turnServer = process.env.TURN_SERVER;
+const turnUsername = process.env.TURN_USERNAME;
+const turnCredential = process.env.TURN_CREDENTIAL;
+
 const createMyPeer = () => {
   if (typeof window !== 'undefined') {
     const { Peer: PeerGlobal }: any = window;
     Peer = PeerGlobal;
     const securePeer = peerPort === '443';
-    myPeer = new Peer(undefined, {
-      path: '/peerjs',
-      host: peerHost,
-      port: peerPort,
-      secure: securePeer,
+    // myPeer = new Peer(undefined, {
+    //   path: '/peerjs',
+    //   host: peerHost,
+    //   port: peerPort,
+    //   secure: securePeer,
+    //   debug: 3,
+    //   config: {
+    //     iceServers: [
+    //       { url: 'stun:108.177.98.127:19302' },
+    //       { url: 'stun:stun.l.google.com:19302' },
+    //       {
+    //         url: 'turn:numb.viagenie.ca',
+    //         credential: 'muazkh',
+    //         username: 'webrtc@live.com',
+    //       },
+    //     ],
+    //   },
+    // });
+    myPeer = new Peer(null, {
       debug: 3,
       config: {
         iceServers: [
-          { url: 'stun:stun.l.google.com:19302' },
+          { url: stunServer },
           {
-            url: 'turn:numb.viagenie.ca',
-            credential: 'muazkh',
-            username: 'webrtc@live.com',
+            url: turnServer,
+            username: turnUsername,
+            credential: turnCredential,
           },
         ],
       },
     });
   }
-  //   myPeer = new Peer(null, {
-  //     debug: 3,
-  //   });
-  // }
 };
 
 export const showPeer = () => {

@@ -6,6 +6,11 @@ let myPeer;
 const peerHost = process.env.PEER_URL;
 const peerPort = process.env.PEER_PORT || 5000;
 
+const stunServer = process.env.STUN_SERVER;
+const turnServer = process.env.TURN_SERVER;
+const turnUsername = process.env.TURN_USERNAME;
+const turnCredential = process.env.TURN_CREDENTIAL;
+
 const createMyPeer = () => {
   if (typeof window !== 'undefined') {
     const { Peer: PeerGlobal }: any = window;
@@ -29,7 +34,19 @@ const createMyPeer = () => {
     //     ],
     //   },
     // });
-    myPeer = new Peer(null, { debug: 3 });
+    myPeer = new Peer(null, {
+      debug: 3,
+      config: {
+        iceServers: [
+          { url: stunServer },
+          {
+            url: turnServer,
+            username: turnUsername,
+            credential: turnCredential,
+          },
+        ],
+      },
+    });
   }
 };
 

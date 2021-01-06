@@ -15,7 +15,31 @@ const createMyPeer = () => {
   if (typeof window !== 'undefined') {
     const { Peer: PeerGlobal }: any = window;
     Peer = PeerGlobal;
-    const securePeer = peerPort === '443';
+
+    const optionsPeer = {
+      debug: 3,
+      config: {
+        iceServers: [],
+      },
+    };
+
+    if (stunServer) {
+      optionsPeer.config.iceServers.push({ url: stunServer });
+    }
+
+    if (turnServer) {
+      optionsPeer.config.iceServers.push({
+        url: turnServer,
+        username: turnUsername,
+        credential: turnCredential,
+      });
+    }
+
+    myPeer = new Peer(null, optionsPeer);
+
+    // Para servidor peer próprio
+
+    // const securePeer = peerPort === '443';
     // myPeer = new Peer(undefined, {
     //   path: '/peerjs',
     //   host: peerHost,
@@ -34,19 +58,6 @@ const createMyPeer = () => {
     //     ],
     //   },
     // });
-    myPeer = new Peer(null, {
-      debug: 3,
-      config: {
-        iceServers: [
-          { url: stunServer },
-          {
-            url: turnServer,
-            username: turnUsername,
-            credential: turnCredential,
-          },
-        ],
-      },
-    });
   }
 };
 

@@ -26,6 +26,7 @@ import {
   VStack,
   Container,
   useToast,
+  Spacer,
 } from '@chakra-ui/react';
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
@@ -45,6 +46,7 @@ import {
 } from '../services/webpeers';
 import {
   handUp,
+  sendGetUsers,
   sendMute,
   socketSendMessage,
   socketSendNotification,
@@ -54,6 +56,7 @@ import {
   subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
+  subcribeUsersInRoom,
 } from '../services/websocket';
 
 const peers = {};
@@ -75,6 +78,11 @@ interface IChatMessage {
   message: string;
 }
 
+interface IUser {
+  id: string;
+  name: string;
+}
+
 const RoomPage: React.FC = () => {
   const toast = useToast();
   const myVideoEl = useRef(null);
@@ -86,6 +94,8 @@ const RoomPage: React.FC = () => {
   const [myHandUp, setMyHandup] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
+
+  const [users, setUsers] = useState<IUser[]>([]);
 
   const videoClasses = 'object-cover h-full w-full relative';
   const router = useRouter();
@@ -158,6 +168,7 @@ const RoomPage: React.FC = () => {
         console.log(err);
         socketSendNotification(err.message);
       }
+
       getMyMediaWebCam((errWebCam, stream) => {
         const call = peerCall(userId, stream);
         const divElVideo = document.createElement('div');
@@ -189,6 +200,7 @@ const RoomPage: React.FC = () => {
           if (gridCol < 3) {
             setGridCol(gridCol - 1);
           }
+          sendGetUsers();
         }
       }
     });
@@ -235,7 +247,30 @@ const RoomPage: React.FC = () => {
       alert(`Ocorreu um erro com o peer: ${name}`);
       console.log(errorPeer);
     });
+
+    subcribeUsersInRoom((err, usersInRoom) => {
+      updateUser(usersInRoom);
+    });
   }, [modal]);
+
+  useEffect(() => {
+    const gridVideo = gridVideoEl.current;
+    const idLastElement = gridVideo.lastElementChild.id;
+    const textElement = document.getElementById(`name-${idLastElement}`);
+
+    if (users.length <= 1 || users.length < gridVideo.children.length) {
+      return;
+    }
+
+    if (textElement && textElement.innerHTML !== '') {
+      return;
+    }
+
+    if (textElement && textElement.innerHTML === '') {
+      const user = users.find(userFind => userFind.id === idLastElement);
+      textElement.innerHTML = user.name;
+    }
+  }, [users]);
 
   useEffect(() => {
     scrollChatToBottom();
@@ -260,6 +295,13 @@ const RoomPage: React.FC = () => {
     }
   });
 
+  const updateUser = useCallback(
+    (userUpdated: IUser[]) => {
+      setUsers(userUpdated);
+    },
+    [users],
+  );
+
   const addMessage = useCallback(
     ({ authorName, message, position }: IChatMessage) => {
       setChatMessages(state => [...state, { authorName, message, position }]);
@@ -274,28 +316,21 @@ const RoomPage: React.FC = () => {
   };
 
   const addVideoStream = (divElVideo, videoElement, stream) => {
-    videoElement.autoplay = true;
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
 
-    // videoElement.addEventListener('loadedmetadata', async () => {
-    //   await videoElement.play();
-    //   const videoGridElement = gridVideoEl.current;
+    videoElement.onloadedmetadata = async () => {
+      await videoElement.play();
+      const videoGridElement = gridVideoEl.current;
 
-    //   videoGridElement.append(divElVideo);
+      videoGridElement.append(divElVideo);
 
-    //   if (gridCol < 3) {
-    //     setGridCol(gridCol + 1);
-    //   }
-    // });
+      if (gridCol < 3) {
+        setGridCol(gridCol + 1);
+      }
 
-    const videoGridElement = gridVideoEl.current;
-
-    videoGridElement.append(divElVideo);
-
-    if (gridCol < 3) {
-      setGridCol(gridCol + 1);
-    }
+      sendGetUsers();
+    };
   };
 
   const handleSendMessage = () => {
@@ -330,12 +365,17 @@ const RoomPage: React.FC = () => {
   const createVideoStatusElement = userId => {
     return (
       <HStack
+        width="100%"
         position="absolute"
         bottom={0}
         right={0}
         padding="0.5rem"
         zIndex={2}
       >
+        <Box backgroundColor="white" padding="0.25rem" borderRadius="0.5rem">
+          <Text fontWeight="bold" id={`name-${userId}`} />
+        </Box>
+        <Spacer />
         <Box backgroundColor="white" borderRadius="0.5rem">
           <Box
             id={`handle-${userId}`}
@@ -377,7 +417,21 @@ const RoomPage: React.FC = () => {
                   <video className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
                   </video>
-                  <HStack position="absolute" bottom={0} right={0} padding={2}>
+                  <HStack
+                    width="100%"
+                    position="absolute"
+                    bottom={0}
+                    right={0}
+                    padding={2}
+                  >
+                    <Box
+                      backgroundColor="white"
+                      padding="0.25rem"
+                      borderRadius="0.5rem"
+                    >
+                      <Text fontWeight="bold">Me</Text>
+                    </Box>
+                    <Spacer />
                     {myHandUp && (
                       <Box backgroundColor="white" borderRadius="lg">
                         <Box

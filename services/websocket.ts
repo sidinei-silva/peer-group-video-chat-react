@@ -63,3 +63,13 @@ export const subcribeToggleMute = callback => {
 export const sendMute = (userId, isMute) => {
   socket.emit('mute', { userId, isMute });
 };
+
+export const subcribeUsersInRoom = callback => {
+  socket.on('users-in-room', ({ users: usersInRoom }) => {
+    return callback(null, usersInRoom);
+  });
+};
+
+export const sendGetUsers = () => {
+  socket.emit('get-users', {});
+};

@@ -17,7 +17,7 @@ const createMyPeer = () => {
     Peer = PeerGlobal;
 
     const optionsPeer = {
-      debug: 3,
+      debug: 0,
       config: {
         iceServers: [],
       },

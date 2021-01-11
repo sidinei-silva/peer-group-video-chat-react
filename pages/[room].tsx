@@ -27,14 +27,27 @@ import {
   Container,
   useToast,
   Spacer,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionIcon,
+  AccordionPanel,
 } from '@chakra-ui/react';
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import ReactDOM from 'react-dom';
 
-import { IoHandRightOutline, IoHandRightSharp } from 'react-icons/io5';
+import { IoHandRightOutline, IoHandRightSharp, IoEarth } from 'react-icons/io5';
 import { AiOutlineAudioMuted, AiOutlineAudio } from 'react-icons/ai';
+import getConnectionDetails from '../services/getConnectionsDetails';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
 import {
   myPeerId,
@@ -83,6 +96,15 @@ interface IUser {
   name: string;
 }
 
+interface IConnectionCadidate {
+  localAddress: string;
+  hostTypeCadidate: string;
+  remoteAddress: string;
+  remoteTypeCadidate: string;
+  remoteId: string;
+  remoteName: string;
+}
+
 const RoomPage: React.FC = () => {
   const toast = useToast();
   const myVideoEl = useRef(null);
@@ -95,6 +117,10 @@ const RoomPage: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
 
+  const [connectionsCadidates, setConnectionsCadidates] = useState<
+    IConnectionCadidate[]
+  >([]);
+
   const [users, setUsers] = useState<IUser[]>([]);
 
   const videoClasses = 'object-cover h-full w-full relative';
@@ -102,6 +128,15 @@ const RoomPage: React.FC = () => {
   const { room } = router.query;
 
   const { onClose } = useDisclosure();
+
+  const btnRefStatsCandidate = React.useRef();
+  const refBodyDrawerStatsCandidate = React.useRef();
+
+  const {
+    isOpen: isOpenStatsCandidate,
+    onOpen: onOpenStatsCandidate,
+    onClose: onCloseStatsCandidate,
+  } = useDisclosure();
 
   const enterRoom = () => {
     if (room && modal && name.length > 0) {
@@ -139,6 +174,7 @@ const RoomPage: React.FC = () => {
         console.log(err);
         socketSendNotification(err.message);
       }
+
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
 
@@ -201,6 +237,7 @@ const RoomPage: React.FC = () => {
             setGridCol(gridCol - 1);
           }
           sendGetUsers();
+          removeConnectionCadidateByUserId(userId);
         }
       }
     });
@@ -269,8 +306,24 @@ const RoomPage: React.FC = () => {
     if (textElement && textElement.innerHTML === '') {
       const user = users.find(userFind => userFind.id === idLastElement);
       textElement.innerHTML = user.name;
+      debugConnection(user);
     }
   }, [users]);
+
+  const debugConnection = async (user: IUser) => {
+    const peer = showPeer();
+    const peerConnectionNewUser = peer.connections[user.id][0].peerConnection;
+    const connectionDetails = await getConnectionDetails(peerConnectionNewUser);
+
+    addConnectionCadidate({
+      localAddress: connectionDetails.LocalAddress,
+      hostTypeCadidate: connectionDetails.LocalCandidateType,
+      remoteAddress: connectionDetails.RemoteAddress,
+      remoteId: user.id,
+      remoteName: user.name,
+      remoteTypeCadidate: connectionDetails.RemoteCandidateType,
+    });
+  };
 
   useEffect(() => {
     scrollChatToBottom();
@@ -308,6 +361,38 @@ const RoomPage: React.FC = () => {
     },
     [],
   );
+
+  const addConnectionCadidate = useCallback(
+    ({
+      localAddress,
+      hostTypeCadidate,
+      remoteId,
+      remoteAddress: remoteIp,
+      remoteName,
+      remoteTypeCadidate,
+    }: IConnectionCadidate) => {
+      setConnectionsCadidates(state => [
+        ...state,
+        {
+          localAddress,
+          hostTypeCadidate,
+          remoteId,
+          remoteAddress: remoteIp,
+          remoteName,
+          remoteTypeCadidate,
+        },
+      ]);
+    },
+    [],
+  );
+
+  const removeConnectionCadidateByUserId = useCallback(({ userId }) => {
+    const newConnectionsCadidates = connectionsCadidates.filter(
+      connectionCandidate => connectionCandidate.remoteId !== userId,
+    );
+
+    setConnectionsCadidates(newConnectionsCadidates);
+  }, []);
 
   const keyDownEnter = event => {
     if (event.which === 13) {
@@ -462,6 +547,17 @@ const RoomPage: React.FC = () => {
                 justify="center"
               >
                 <Button
+                  ref={btnRefStatsCandidate}
+                  onClick={onOpenStatsCandidate}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <Box size="2rem" color="blue.500" as={IoEarth} />
+                </Button>
+                <Button
                   onClick={handleMyHand}
                   type="button"
                   _hover={{
@@ -586,6 +682,79 @@ const RoomPage: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <Drawer
+        isOpen={isOpenStatsCandidate}
+        placement="left"
+        onClose={onCloseStatsCandidate}
+        finalFocusRef={btnRefStatsCandidate}
+      >
+        <DrawerOverlay>
+          <DrawerContent>
+            <DrawerHeader>Log de Conexão Candidata</DrawerHeader>
+
+            <DrawerBody ref={refBodyDrawerStatsCandidate}>
+              <Divider />
+              <Accordion defaultIndex={[0]} allowMultiple>
+                {connectionsCadidates.map(candidate => (
+                  <AccordionItem>
+                    <AccordionButton>
+                      <Box flex="1" textAlign="left">
+                        <Text as="span">Conectado com: </Text>
+                        <Text as="span" fontWeight="bold">
+                          {candidate.remoteName}
+                        </Text>
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                    <AccordionPanel pb={4}>
+                      <UnorderedList styleType="none">
+                        <ListItem>
+                          <VStack align="start">
+                            <Text fontSize="sm">
+                              <Text fontWeight="bold">Seu Ip:</Text>
+                              <Text as="span">{candidate.localAddress}</Text>
+                            </Text>
+                            <Text fontSize="sm">
+                              <Text fontWeight="bold">
+                                Seu tipo de conexão:
+                              </Text>
+                              <Text as="span">
+                                {candidate.hostTypeCadidate}
+                              </Text>
+                            </Text>
+                            <Text fontSize="sm">
+                              <Text fontWeight="bold">Id do convidado:</Text>
+                              <Text as="span">{candidate.remoteId}</Text>
+                            </Text>
+                            <Text fontSize="sm">
+                              <Text fontWeight="bold">Ip do convidado:</Text>
+                              <Text as="span">{candidate.remoteAddress}</Text>
+                            </Text>
+                            <Text fontSize="sm">
+                              <Text fontWeight="bold">
+                                Tipo de conexão do convidado:
+                              </Text>
+                              <Text as="span">
+                                {candidate.remoteTypeCadidate}
+                              </Text>
+                            </Text>
+                          </VStack>
+                        </ListItem>
+                      </UnorderedList>
+                    </AccordionPanel>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </DrawerBody>
+
+            <DrawerFooter>
+              <Button variant="outline" mr={3} onClick={onCloseStatsCandidate}>
+                Fechar
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </DrawerOverlay>
+      </Drawer>
     </>
   );
 };

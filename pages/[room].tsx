@@ -703,6 +703,19 @@ const RoomPage: React.FC = () => {
                         <Text as="span" fontWeight="bold">
                           {candidate.remoteName}
                         </Text>
+                        <Text as="span" color="blue.500">
+                          {candidate.remoteTypeCadidate === 'prflx' ||
+                            (candidate.remoteTypeCadidate === 'relay' &&
+                              ' - (Turn)')}
+                          {candidate.remoteTypeCadidate === 'srflx' &&
+                            ' - (Stun)'}
+
+                          {candidate.remoteTypeCadidate === 'host' &&
+                            '- (Host)'}
+
+                          {candidate.remoteTypeCadidate === 'local' &&
+                            ' - (Local)'}
+                        </Text>
                       </Box>
                       <AccordionIcon />
                     </AccordionButton>

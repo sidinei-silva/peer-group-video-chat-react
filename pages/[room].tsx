@@ -35,6 +35,7 @@ import ReactDOM from 'react-dom';
 
 import { IoHandRightOutline, IoHandRightSharp } from 'react-icons/io5';
 import { AiOutlineAudioMuted, AiOutlineAudio } from 'react-icons/ai';
+import getConnectionDetails from '../services/getConnectionsDetails';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
 import {
   myPeerId,
@@ -139,6 +140,7 @@ const RoomPage: React.FC = () => {
         console.log(err);
         socketSendNotification(err.message);
       }
+
       getMyMediaWebCam((errWebCam, stream) => {
         call.answer(stream);
 
@@ -269,8 +271,17 @@ const RoomPage: React.FC = () => {
     if (textElement && textElement.innerHTML === '') {
       const user = users.find(userFind => userFind.id === idLastElement);
       textElement.innerHTML = user.name;
+      debugConnection(idLastElement);
     }
   }, [users]);
+
+  const debugConnection = async userId => {
+    const peer = showPeer();
+    const peerConnectionNewUser = peer.connections[userId][0].peerConnection;
+    console.log('myPeer', peer);
+    const connectionDetails = await getConnectionDetails(peerConnectionNewUser);
+    console.log(connectionDetails);
+  };
 
   useEffect(() => {
     scrollChatToBottom();

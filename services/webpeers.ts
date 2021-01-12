@@ -20,15 +20,14 @@ const createMyPeer = () => {
 
     const optionsPeer = {
       debug: 0,
+      path: '/peerjs',
+      host: peerHost,
+      port: peerPort,
+      secure: securePeer,
       config: {
         iceServers: [],
       },
     };
-
-    // path: '/peerjs',
-    //   host: peerHost,
-    //   port: peerPort,
-    //   secure: securePeer,
 
     if (stunServer) {
       optionsPeer.config.iceServers.push({ url: stunServer });

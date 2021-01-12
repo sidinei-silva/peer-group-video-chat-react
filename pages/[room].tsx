@@ -94,6 +94,8 @@ interface IChatMessage {
 interface IUser {
   id: string;
   name: string;
+  isMuted: boolean;
+  isHandUp: boolean;
 }
 
 interface IConnectionCadidate {
@@ -247,28 +249,11 @@ const RoomPage: React.FC = () => {
     });
 
     subcribeToggleHandUp((err, userId, isHandUp) => {
-      const handleUser = document.getElementById(`handle-${userId}`);
-      if (isHandUp) {
-        handleUser.style.display = 'block';
-      } else {
-        handleUser.style.display = 'none';
-      }
+      changeHandsUpElementRemote(userId, isHandUp);
     });
 
     subcribeToggleMute((err, userId, isMutedParamns) => {
-      const mutedUser = document.getElementById(`microphone-${userId}`);
-
-      const videoUser = document.getElementById(`video-${userId}`);
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      videoUser.muted = isMutedParamns;
-
-      if (isMutedParamns) {
-        mutedUser.style.display = 'block';
-      } else {
-        mutedUser.style.display = 'none';
-      }
+      changeMuteElementRemote(userId, isMutedParamns);
     });
 
     subcribeCreateNotification((err, notification) => {
@@ -306,6 +291,8 @@ const RoomPage: React.FC = () => {
     if (textElement && textElement.innerHTML === '') {
       const user = users.find(userFind => userFind.id === idLastElement);
       textElement.innerHTML = user.name;
+      changeMuteElementRemote(user.id, user.isMuted);
+      changeHandsUpElementRemote(user.id, user.isHandUp);
       debugConnection(user);
     }
   }, [users]);
@@ -483,6 +470,31 @@ const RoomPage: React.FC = () => {
         </Box>
       </HStack>
     );
+  };
+
+  const changeMuteElementRemote = (userId, isMutedParamns) => {
+    const mutedUser = document.getElementById(`microphone-${userId}`);
+
+    const videoUser = document.getElementById(`video-${userId}`);
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    videoUser.muted = isMutedParamns;
+
+    if (isMutedParamns) {
+      mutedUser.style.display = 'block';
+    } else {
+      mutedUser.style.display = 'none';
+    }
+  };
+
+  const changeHandsUpElementRemote = (userId, isHandUp) => {
+    const handleUser = document.getElementById(`handle-${userId}`);
+    if (isHandUp) {
+      handleUser.style.display = 'block';
+    } else {
+      handleUser.style.display = 'none';
+    }
   };
 
   return (

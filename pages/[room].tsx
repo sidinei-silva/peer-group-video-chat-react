@@ -94,6 +94,7 @@ interface IChatMessage {
 interface IUser {
   id: string;
   name: string;
+  isMuted: boolean;
 }
 
 interface IConnectionCadidate {
@@ -256,19 +257,7 @@ const RoomPage: React.FC = () => {
     });
 
     subcribeToggleMute((err, userId, isMutedParamns) => {
-      const mutedUser = document.getElementById(`microphone-${userId}`);
-
-      const videoUser = document.getElementById(`video-${userId}`);
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      videoUser.muted = isMutedParamns;
-
-      if (isMutedParamns) {
-        mutedUser.style.display = 'block';
-      } else {
-        mutedUser.style.display = 'none';
-      }
+      changeMuteElementRemote(userId, isMutedParamns);
     });
 
     subcribeCreateNotification((err, notification) => {
@@ -306,6 +295,7 @@ const RoomPage: React.FC = () => {
     if (textElement && textElement.innerHTML === '') {
       const user = users.find(userFind => userFind.id === idLastElement);
       textElement.innerHTML = user.name;
+      changeMuteElementRemote(user.id, user.isMuted);
       debugConnection(user);
     }
   }, [users]);
@@ -483,6 +473,22 @@ const RoomPage: React.FC = () => {
         </Box>
       </HStack>
     );
+  };
+
+  const changeMuteElementRemote = (userId, isMutedParamns) => {
+    const mutedUser = document.getElementById(`microphone-${userId}`);
+
+    const videoUser = document.getElementById(`video-${userId}`);
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    videoUser.muted = isMutedParamns;
+
+    if (isMutedParamns) {
+      mutedUser.style.display = 'block';
+    } else {
+      mutedUser.style.display = 'none';
+    }
   };
 
   return (

@@ -95,6 +95,7 @@ interface IUser {
   id: string;
   name: string;
   isMuted: boolean;
+  isHandUp: boolean;
 }
 
 interface IConnectionCadidate {
@@ -248,12 +249,7 @@ const RoomPage: React.FC = () => {
     });
 
     subcribeToggleHandUp((err, userId, isHandUp) => {
-      const handleUser = document.getElementById(`handle-${userId}`);
-      if (isHandUp) {
-        handleUser.style.display = 'block';
-      } else {
-        handleUser.style.display = 'none';
-      }
+      changeHandsUpElementRemote(userId, isHandUp);
     });
 
     subcribeToggleMute((err, userId, isMutedParamns) => {
@@ -296,6 +292,7 @@ const RoomPage: React.FC = () => {
       const user = users.find(userFind => userFind.id === idLastElement);
       textElement.innerHTML = user.name;
       changeMuteElementRemote(user.id, user.isMuted);
+      changeHandsUpElementRemote(user.id, user.isHandUp);
       debugConnection(user);
     }
   }, [users]);
@@ -488,6 +485,15 @@ const RoomPage: React.FC = () => {
       mutedUser.style.display = 'block';
     } else {
       mutedUser.style.display = 'none';
+    }
+  };
+
+  const changeHandsUpElementRemote = (userId, isHandUp) => {
+    const handleUser = document.getElementById(`handle-${userId}`);
+    if (isHandUp) {
+      handleUser.style.display = 'block';
+    } else {
+      handleUser.style.display = 'none';
     }
   };
 

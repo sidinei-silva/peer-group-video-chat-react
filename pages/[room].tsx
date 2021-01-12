@@ -111,7 +111,6 @@ const RoomPage: React.FC = () => {
   const toast = useToast();
   const myVideoEl = useRef(null);
   const gridVideoEl = useRef(null);
-  const [gridCol, setGridCol] = useState(1);
   const [inputMessage, setInputMessage] = useState('');
   const [name, setName] = useState('');
   const [modal, setModal] = useState(true);
@@ -235,9 +234,7 @@ const RoomPage: React.FC = () => {
         const elementDisconnected = document.getElementById(userId);
         if (elementDisconnected) {
           elementDisconnected.remove();
-          if (gridCol < 3) {
-            setGridCol(gridCol - 1);
-          }
+
           sendGetUsers();
           removeConnectionCadidateByUserId(userId);
         }
@@ -316,25 +313,6 @@ const RoomPage: React.FC = () => {
     scrollChatToBottom();
   }, [chatMessages]);
 
-  useEffect(() => {
-    const gridVideo = gridVideoEl.current;
-    switch (gridVideo.children.length) {
-      case 0:
-        setGridCol(0);
-        break;
-      case 1:
-        setGridCol(1);
-        break;
-      case 2:
-        setGridCol(2);
-        break;
-
-      default:
-        setGridCol(3);
-        break;
-    }
-  });
-
   const updateUser = useCallback(
     (userUpdated: IUser[]) => {
       setUsers(userUpdated);
@@ -396,10 +374,6 @@ const RoomPage: React.FC = () => {
       const videoGridElement = gridVideoEl.current;
 
       videoGridElement.append(divElVideo);
-
-      if (gridCol < 3) {
-        setGridCol(gridCol + 1);
-      }
 
       sendGetUsers();
     };
@@ -508,7 +482,7 @@ const RoomPage: React.FC = () => {
                 flex={1}
                 bgColor="black"
                 gap={4}
-                templateColumns={`repeat(${gridCol}, 1fr)`}
+                gridTemplateColumns="repeat(auto-fit, minmax(300px, 1fr))"
               >
                 <div className="relative">
                   <video className={videoClasses} ref={myVideoEl}>

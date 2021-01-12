@@ -16,8 +16,14 @@ const createMyPeer = () => {
     const { Peer: PeerGlobal }: any = window;
     Peer = PeerGlobal;
 
+    const securePeer = peerPort === '443';
+
     const optionsPeer = {
       debug: 0,
+      path: '/peerjs',
+      host: peerHost,
+      port: peerPort,
+      secure: securePeer,
       config: {
         iceServers: [],
       },
@@ -36,28 +42,6 @@ const createMyPeer = () => {
     }
 
     myPeer = new Peer(null, optionsPeer);
-
-    // Para servidor peer próprio
-
-    // const securePeer = peerPort === '443';
-    // myPeer = new Peer(undefined, {
-    //   path: '/peerjs',
-    //   host: peerHost,
-    //   port: peerPort,
-    //   secure: securePeer,
-    //   debug: 3,
-    //   config: {
-    //     iceServers: [
-    //       { url: 'stun:108.177.98.127:19302' },
-    //       { url: 'stun:stun.l.google.com:19302' },
-    //       {
-    //         url: 'turn:numb.viagenie.ca',
-    //         credential: 'muazkh',
-    //         username: 'webrtc@live.com',
-    //       },
-    //     ],
-    //   },
-    // });
   }
 };
 

@@ -16,12 +16,14 @@ const createMyPeer = () => {
     const { Peer: PeerGlobal }: any = window;
     Peer = PeerGlobal;
 
+    const securePeer = peerHost !== 'localhost';
+
     const optionsPeer = {
       debug: 0,
       path: '/peerjs',
       host: peerHost,
       port: peerPort,
-      secure: true,
+      secure: securePeer,
       config: {
         iceServers: [],
       },

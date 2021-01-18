@@ -10,6 +10,7 @@ import {
   Box,
   Button,
 } from '@chakra-ui/react';
+import { getMyMediaWebCam } from '../services/navegatorMedia';
 
 export default function Home() {
   const myVideoEl = useRef(null);
@@ -35,19 +36,12 @@ export default function Home() {
       return;
     }
 
-    if (typeof navigator !== 'undefined') {
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then(stream => {
-          const video = myVideoEl.current;
-          video.srcObject = stream;
-          video.play();
-          video.muted = true;
-        })
-        .catch(() => {
-          setDisableButton(true);
-        });
-    }
+    getMyMediaWebCam((err, stream) => {
+      const video = myVideoEl.current;
+      video.srcObject = stream;
+      video.play();
+      video.muted = true;
+    });
   }, [myVideoEl]);
 
   return (

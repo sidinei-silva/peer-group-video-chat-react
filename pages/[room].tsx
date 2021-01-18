@@ -46,9 +46,10 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 
 import { IoHandRightOutline, IoHandRightSharp, IoEarth } from 'react-icons/io5';
+import { MdScreenShare, MdStopScreenShare } from 'react-icons/md';
 import { AiOutlineAudioMuted, AiOutlineAudio } from 'react-icons/ai';
 import getConnectionDetails from '../services/getConnectionsDetails';
-import { getMyMediaWebCam } from '../services/navegatorMedia';
+import { getMyMediaScreen, getMyMediaWebCam } from '../services/navegatorMedia';
 import {
   myPeerId,
   openPeer,
@@ -65,11 +66,14 @@ import {
   socketSendNotification,
   subcribeCreateMessage,
   subcribeCreateNotification,
+  subcribeRemoveSharedScreen,
   subcribeToggleHandUp,
   subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
   subcribeUsersInRoom,
+  userStartTransmitting,
+  userStopTransmitting,
 } from '../services/websocket';
 
 const peers = {};
@@ -110,6 +114,8 @@ interface IConnectionCadidate {
 const RoomPage: React.FC = () => {
   const toast = useToast();
   const myVideoEl = useRef(null);
+  const myStreamScreen = useRef(null);
+  const refRemoteStreamScreen = useRef(null);
   const gridVideoEl = useRef(null);
   const [inputMessage, setInputMessage] = useState('');
   const [name, setName] = useState('');
@@ -117,6 +123,8 @@ const RoomPage: React.FC = () => {
   const [myHandUp, setMyHandup] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
+
+  const [transmittingScreen, setTransmittingScreen] = useState(false);
 
   const [connectionsCadidates, setConnectionsCadidates] = useState<
     IConnectionCadidate[]
@@ -176,28 +184,51 @@ const RoomPage: React.FC = () => {
         socketSendNotification(err.message);
       }
 
-      getMyMediaWebCam((errWebCam, stream) => {
-        call.answer(stream);
+      const peer = showPeer();
+      const peerMediasStream = peer.connections[call.peer];
 
-        const divElVideo = document.createElement('div');
-        divElVideo.className += 'relative';
-        divElVideo.id = call.peer;
+      if (peerMediasStream.length > 1) {
+        call.answer();
 
-        const hostVideo = document.createElement('video');
-        hostVideo.id = `video-${call.peer}`;
+        const divElementScreenShared = refRemoteStreamScreen.current;
 
-        const videoStatusElement = createVideoStatusElement(call.peer);
+        const videoScreenShared = document.createElement('video');
+        videoScreenShared.id = `screen-shared-${call.peer}`;
+        videoScreenShared.muted = true;
 
-        ReactDOM.render(videoStatusElement, divElVideo);
+        divElementScreenShared.appendChild(videoScreenShared);
 
-        divElVideo.appendChild(hostVideo);
-
-        peers[call.peer] = call;
-
-        call.on('stream', userVideoStream => {
-          addVideoStream(divElVideo, hostVideo, userVideoStream);
+        call.on('stream', screenStream => {
+          videoScreenShared.srcObject = screenStream;
+          videoScreenShared.onloadedmetadata = async () => {
+            await videoScreenShared.play();
+            divElementScreenShared.style.display = 'block';
+          };
         });
-      });
+      } else {
+        getMyMediaWebCam((errWebCam, stream) => {
+          call.answer(stream);
+
+          const divElVideo = document.createElement('div');
+          divElVideo.className += 'relative';
+          divElVideo.id = call.peer;
+
+          const hostVideo = document.createElement('video');
+          hostVideo.id = `video-${call.peer}`;
+
+          const videoStatusElement = createVideoStatusElement(call.peer);
+
+          ReactDOM.render(videoStatusElement, divElVideo);
+
+          divElVideo.appendChild(hostVideo);
+
+          peers[call.peer] = call;
+
+          call.on('stream', userVideoStream => {
+            addVideoStream(divElVideo, hostVideo, userVideoStream);
+          });
+        });
+      }
     });
 
     subcribeUserConnect((err, userId) => {
@@ -224,7 +255,20 @@ const RoomPage: React.FC = () => {
         call.on('stream', userVideoStream => {
           addVideoStream(divElVideo, newUserVideoElement, userVideoStream);
         });
+
         peers[userId] = call;
+
+        newUserVideoElement.onloadedmetadata = () => {
+          const peerId = myPeerId();
+          const videoElementScreenShared: any = document.getElementById(
+            `screen-shared-${peerId}`,
+          );
+
+          if (videoElementScreenShared) {
+            const streamSharedScreen = videoElementScreenShared.srcObject;
+            peerCall(userId, streamSharedScreen);
+          }
+        };
       });
     });
 
@@ -269,6 +313,10 @@ const RoomPage: React.FC = () => {
 
     subcribeUsersInRoom((err, usersInRoom) => {
       updateUser(usersInRoom);
+    });
+
+    subcribeRemoveSharedScreen((err, userId) => {
+      removeSharedVideoScreen(userId);
     });
   }, [modal]);
 
@@ -365,18 +413,15 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const addVideoStream = (divElVideo, videoElement, stream) => {
+  const addVideoStream = async (divElVideo, videoElement, stream) => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
+    videoElement.autoplay = true;
 
-    videoElement.onloadedmetadata = async () => {
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
-
-      videoGridElement.append(divElVideo);
-
-      sendGetUsers();
-    };
+    await videoElement.play();
+    const videoGridElement = gridVideoEl.current;
+    videoGridElement.append(divElVideo);
+    sendGetUsers();
   };
 
   const handleSendMessage = () => {
@@ -471,19 +516,128 @@ const RoomPage: React.FC = () => {
     }
   };
 
+  const handleTransmittingScreen = () => {
+    const peer = showPeer();
+    const connections = Object.keys(peer.connections);
+
+    const myScreen = myStreamScreen.current;
+    if (!transmittingScreen) {
+      getMyMediaScreen((err, stream) => {
+        myScreen.style.display = 'flex';
+
+        const divElementScreenShared = refRemoteStreamScreen.current;
+        const videoScreenShared = document.createElement('video');
+        videoScreenShared.id = `screen-shared-${peer.id}`;
+        videoScreenShared.muted = true;
+        videoScreenShared.srcObject = stream;
+        divElementScreenShared.appendChild(videoScreenShared);
+
+        connections.forEach(idConnection => {
+          peerCall(idConnection, stream);
+        });
+
+        stream.getVideoTracks()[0].onended = function () {
+          userStopTransmitting();
+          setTransmittingScreen(false);
+        };
+
+        setTransmittingScreen(true);
+        userStartTransmitting();
+      });
+    } else {
+      userStopTransmitting();
+
+      myScreen.style.display = 'none';
+      setTransmittingScreen(false);
+    }
+  };
+
+  const removeSharedVideoScreen = peerId => {
+    const myScreen = myStreamScreen.current;
+    myScreen.style.display = 'none';
+    const divElementScreenShared = refRemoteStreamScreen.current;
+    divElementScreenShared.style.display = 'none';
+
+    const videoElementScreenShared: any = document.getElementById(
+      `screen-shared-${peerId}`,
+    );
+
+    if (videoElementScreenShared) {
+      const tracks = videoElementScreenShared.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoElementScreenShared.srcObject = null;
+      videoElementScreenShared.remove();
+    }
+  };
+
+  const getStateTransmittingScreen = useCallback(() => {
+    console.log(transmittingScreen);
+  }, [transmittingScreen]);
+
   return (
     <>
       <Container maxWidth="100%" height="100vh" p={2}>
         <Flex height="100%">
           <Box flex={1}>
             <Flex direction="column" height="100%">
+              <VStack
+                padding={4}
+                alignSelf="center"
+                backgroundColor="black"
+                ref={myStreamScreen}
+                height="300px"
+                alignItems="center"
+                justifyContent="center"
+                width="100%"
+                spacing={4}
+                display="none"
+              >
+                <VStack spacing={1}>
+                  <Box
+                    padding={2}
+                    size="4rem"
+                    marginX={1}
+                    color="blue.500"
+                    as={MdScreenShare}
+                  />
+                  <Heading size="md" color="white" textAlign="center">
+                    Você esta transmitindo
+                  </Heading>
+                </VStack>
+
+                <Button
+                  onClick={handleTransmittingScreen}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <span>Parar Transmissão</span>
+                  <Box
+                    size="2rem"
+                    marginX={1}
+                    color="red.500"
+                    as={MdStopScreenShare}
+                  />
+                </Button>
+              </VStack>
               <Grid
                 ref={gridVideoEl}
                 flex={1}
                 bgColor="black"
                 gap={4}
-                gridTemplateColumns="repeat(auto-fit, minmax(300px, 1fr))"
+                gridTemplateColumns="repeat(auto-fit, minmax(200px,1fr))"
+                gridTemplateRows="repeat(auto-fit, minmax(200px,1fr))"
+                gridAutoRows="200px"
+                gridAutoColumns="200px"
               >
+                <GridItem
+                  colSpan={4}
+                  rowSpan={3}
+                  ref={refRemoteStreamScreen}
+                  display="none"
+                />
                 <div className="relative">
                   <video className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
@@ -570,6 +724,21 @@ const RoomPage: React.FC = () => {
                     size="2rem"
                     color={isMuted ? 'red.500' : 'blue.500'}
                     as={isMuted ? AiOutlineAudioMuted : AiOutlineAudio}
+                  />
+                </Button>
+
+                <Button
+                  onClick={handleTransmittingScreen}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <Box
+                    size="2rem"
+                    color={transmittingScreen ? 'red.500' : 'blue.500'}
+                    as={transmittingScreen ? MdStopScreenShare : MdScreenShare}
                   />
                 </Button>
               </HStack>

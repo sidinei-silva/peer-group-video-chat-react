@@ -73,3 +73,17 @@ export const subcribeUsersInRoom = callback => {
 export const sendGetUsers = () => {
   socket.emit('get-users', {});
 };
+
+export const userStartTransmitting = () => {
+  socket.emit('user-start-transmitting', {});
+};
+
+export const userStopTransmitting = () => {
+  socket.emit('user-stop-transmitting', {});
+};
+
+export const subcribeRemoveSharedScreen = callback => {
+  socket.on('remove-shared-screen', ({ userId }) => {
+    return callback(null, userId);
+  });
+};

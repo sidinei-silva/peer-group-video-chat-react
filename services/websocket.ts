@@ -77,3 +77,8 @@ export const sendGetUsers = () => {
 export const userStartTransmitting = () => {
   socket.emit('user-start-transmitting', {});
 };
+
+export const userStopTransmitting = () => {
+  socket.emit('user-stop-transmitting', {});
+};
+

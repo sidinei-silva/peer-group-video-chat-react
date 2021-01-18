@@ -73,3 +73,7 @@ export const subcribeUsersInRoom = callback => {
 export const sendGetUsers = () => {
   socket.emit('get-users', {});
 };
+
+export const userStartTransmitting = () => {
+  socket.emit('user-start-transmitting', {});
+};

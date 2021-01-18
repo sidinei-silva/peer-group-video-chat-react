@@ -255,7 +255,20 @@ const RoomPage: React.FC = () => {
         call.on('stream', userVideoStream => {
           addVideoStream(divElVideo, newUserVideoElement, userVideoStream);
         });
+
         peers[userId] = call;
+
+        newUserVideoElement.onloadedmetadata = () => {
+          const peerId = myPeerId();
+          const videoElementScreenShared: any = document.getElementById(
+            `screen-shared-${peerId}`,
+          );
+
+          if (videoElementScreenShared) {
+            const streamSharedScreen = videoElementScreenShared.srcObject;
+            peerCall(userId, streamSharedScreen);
+          }
+        };
       });
     });
 
@@ -400,18 +413,15 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const addVideoStream = (divElVideo, videoElement, stream) => {
+  const addVideoStream = async (divElVideo, videoElement, stream) => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
+    videoElement.autoplay = true;
 
-    videoElement.onloadedmetadata = async () => {
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
-
-      videoGridElement.append(divElVideo);
-
-      sendGetUsers();
-    };
+    await videoElement.play();
+    const videoGridElement = gridVideoEl.current;
+    videoGridElement.append(divElVideo);
+    sendGetUsers();
   };
 
   const handleSendMessage = () => {
@@ -559,6 +569,10 @@ const RoomPage: React.FC = () => {
       videoElementScreenShared.remove();
     }
   };
+
+  const getStateTransmittingScreen = useCallback(() => {
+    console.log(transmittingScreen);
+  }, [transmittingScreen]);
 
   return (
     <>

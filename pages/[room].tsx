@@ -125,6 +125,9 @@ const RoomPage: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
 
   const [transmittingScreen, setTransmittingScreen] = useState(false);
+  const [remoteTransmittingScreen, setRemoteTransmittingScreen] = useState(
+    false,
+  );
 
   const [connectionsCadidates, setConnectionsCadidates] = useState<
     IConnectionCadidate[]
@@ -203,6 +206,7 @@ const RoomPage: React.FC = () => {
           videoScreenShared.onloadedmetadata = async () => {
             await videoScreenShared.play();
             divElementScreenShared.style.display = 'block';
+            setRemoteTransmittingScreen(true);
           };
         });
       } else {
@@ -317,6 +321,7 @@ const RoomPage: React.FC = () => {
 
     subcribeRemoveSharedScreen((err, userId) => {
       removeSharedVideoScreen(userId);
+      setRemoteTransmittingScreen(false);
     });
   }, [modal]);
 
@@ -570,10 +575,6 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const getStateTransmittingScreen = useCallback(() => {
-    console.log(transmittingScreen);
-  }, [transmittingScreen]);
-
   return (
     <>
       <Container maxWidth="100%" height="100vh" p={2}>
@@ -728,6 +729,7 @@ const RoomPage: React.FC = () => {
                 </Button>
 
                 <Button
+                  disabled={remoteTransmittingScreen}
                   onClick={handleTransmittingScreen}
                   type="button"
                   _hover={{

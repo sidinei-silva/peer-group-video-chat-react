@@ -71,6 +71,18 @@ export const peerCall = (userId, stream) => {
   return myPeer.call(userId, stream);
 };
 
+export const peerDataConnect = (userId, name) => {
+  return myPeer.connect(userId, { label: name });
+};
+
+export const subscribePeerDataConnect = callback => {
+  myPeer.on('connection', conn => {
+    return callback(null, conn);
+  });
+
+  return false;
+};
+
 export const myPeerId = () => {
   return myPeer.id;
 };

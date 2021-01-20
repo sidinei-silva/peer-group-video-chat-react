@@ -54,9 +54,11 @@ import {
   myPeerId,
   openPeer,
   peerCall,
+  peerDataConnect,
   showPeer,
   subscribeCall,
   subscribeError,
+  subscribePeerDataConnect,
 } from '../services/webpeers';
 import {
   handUp,
@@ -243,6 +245,7 @@ const RoomPage: React.FC = () => {
 
       getMyMediaWebCam((errWebCam, stream) => {
         const call = peerCall(userId, stream);
+        peerDataConnect(userId, name);
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = userId;
@@ -322,6 +325,15 @@ const RoomPage: React.FC = () => {
     subcribeRemoveSharedScreen((err, userId) => {
       removeSharedVideoScreen(userId);
       setRemoteTransmittingScreen(false);
+    });
+
+    subscribePeerDataConnect((err, coon) => {
+      addUser({
+        id: coon.peer,
+        name: coon.label,
+        isHandUp: false,
+        isMuted: false,
+      });
     });
   }, [modal]);
 

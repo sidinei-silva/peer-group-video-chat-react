@@ -244,6 +244,12 @@ const RoomPage: React.FC = () => {
       getMyMediaWebCam((errWebCam, stream) => {
         const call = peerCall(userId, stream);
         peerDataConnect(userId, name);
+        addUser({
+          id: userId,
+          name: userName,
+          isHandUp: false,
+          isMuted: false,
+        });
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = userId;
@@ -378,9 +384,12 @@ const RoomPage: React.FC = () => {
     [users],
   );
 
-  const addMessage = useCallback(
-    ({ authorName, message, position }: IChatMessage) => {
-      setChatMessages(state => [...state, { authorName, message, position }]);
+  const addUser = useCallback(
+    ({ id, isHandUp, isMuted: userIsMuted, name: userName }: IUser) => {
+      setUsers(state => [
+        ...state,
+        { id, isHandUp, isMuted: userIsMuted, name: userName },
+      ]);
     },
     [],
   );

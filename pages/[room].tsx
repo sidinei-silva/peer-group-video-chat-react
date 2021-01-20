@@ -62,7 +62,6 @@ import {
 } from '../services/webpeers';
 import {
   handUp,
-  sendGetUsers,
   sendMute,
   socketSendMessage,
   socketSendNotification,
@@ -73,7 +72,6 @@ import {
   subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
-  subcribeUsersInRoom,
   userStartTransmitting,
   userStopTransmitting,
 } from '../services/websocket';
@@ -286,7 +284,6 @@ const RoomPage: React.FC = () => {
         if (elementDisconnected) {
           elementDisconnected.remove();
 
-          sendGetUsers();
           removeConnectionCadidateByUserId(userId);
         }
       }
@@ -316,10 +313,6 @@ const RoomPage: React.FC = () => {
     subscribeError((err, errorPeer) => {
       alert(`Ocorreu um erro com o peer: ${name}`);
       console.log(errorPeer);
-    });
-
-    subcribeUsersInRoom((err, usersInRoom) => {
-      updateUser(usersInRoom);
     });
 
     subcribeRemoveSharedScreen((err, userId) => {
@@ -438,7 +431,6 @@ const RoomPage: React.FC = () => {
     await videoElement.play();
     const videoGridElement = gridVideoEl.current;
     videoGridElement.append(divElVideo);
-    sendGetUsers();
   };
 
   const handleSendMessage = () => {

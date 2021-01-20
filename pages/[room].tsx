@@ -220,7 +220,10 @@ const RoomPage: React.FC = () => {
           const hostVideo = document.createElement('video');
           hostVideo.id = `video-${call.peer}`;
 
-          const videoStatusElement = createVideoStatusElement(call.peer);
+          const videoStatusElement = createVideoStatusElement({
+            userId: call.peer,
+            userName: peerMediasStream[1].label,
+          });
 
           ReactDOM.render(videoStatusElement, divElVideo);
 
@@ -250,6 +253,7 @@ const RoomPage: React.FC = () => {
           isHandUp: false,
           isMuted: false,
         });
+
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = userId;
@@ -257,7 +261,10 @@ const RoomPage: React.FC = () => {
         const newUserVideoElement = document.createElement('video');
         newUserVideoElement.id = `video-${userId}`;
 
-        const videoStatusElement = createVideoStatusElement(userId);
+        const videoStatusElement = createVideoStatusElement({
+          userId,
+          userName,
+        });
 
         ReactDOM.render(videoStatusElement, divElVideo);
 
@@ -377,11 +384,11 @@ const RoomPage: React.FC = () => {
     scrollChatToBottom();
   }, [chatMessages]);
 
-  const updateUser = useCallback(
-    (userUpdated: IUser[]) => {
-      setUsers(userUpdated);
+  const addMessage = useCallback(
+    ({ authorName, message, position }: IChatMessage) => {
+      setChatMessages(state => [...state, { authorName, message, position }]);
     },
-    [users],
+    [],
   );
 
   const addUser = useCallback(
@@ -471,7 +478,7 @@ const RoomPage: React.FC = () => {
     return isMuted ? setIsMuted(false) : setIsMuted(true);
   };
 
-  const createVideoStatusElement = userId => {
+  const createVideoStatusElement = ({ userId, userName }) => {
     return (
       <HStack
         width="100%"
@@ -482,7 +489,9 @@ const RoomPage: React.FC = () => {
         zIndex={2}
       >
         <Box backgroundColor="white" padding="0.25rem" borderRadius="0.5rem">
-          <Text fontWeight="bold" id={`name-${userId}`} />
+          <Text fontWeight="bold" id={`name-${userId}`}>
+            {userName}
+          </Text>
         </Box>
         <Spacer />
         <Box backgroundColor="white" borderRadius="0.5rem">

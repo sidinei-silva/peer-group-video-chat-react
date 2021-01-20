@@ -235,7 +235,7 @@ const RoomPage: React.FC = () => {
       }
     });
 
-    subcribeUserConnect((err, userId) => {
+    subcribeUserConnect((err, userId, userName) => {
       if (err) {
         console.log(err);
         socketSendNotification(err.message);

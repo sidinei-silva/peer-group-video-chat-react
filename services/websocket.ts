@@ -13,8 +13,8 @@ export const joinRoom = (room, userId, name) => {
 };
 
 export const subcribeUserConnect = callback => {
-  socket.on('user-connected', userId => {
-    return callback(null, userId);
+  socket.on('user-connected', ({ userId, userName }) => {
+    return callback(null, userId, userName);
   });
 };
 

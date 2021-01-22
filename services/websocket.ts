@@ -6,6 +6,13 @@ const socket = io(process.env.SOCKET_URL, {
   },
 });
 
+export const socketIoRemoveAllEvents = () => {
+  if (socket) {
+    // @ts-ignore
+    socket.removeAllListeners();
+  }
+};
+
 export const joinRoom = (room, userId, name) => {
   if (socket && room) {
     socket.emit('join-room', room, userId, name);

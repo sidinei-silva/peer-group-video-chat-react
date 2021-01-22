@@ -63,6 +63,15 @@ export const openPeer = ({ room, name }) => {
   return false;
 };
 
+export const peerRemoveAllEvents = () => {
+  if (myPeer) {
+    const eventOpen = myPeer._events.open;
+    // @ts-ignore
+    myPeer.removeAllListeners();
+    myPeer._events.open = eventOpen;
+  }
+};
+
 export const subscribeCall = callback => {
   if (myPeer) {
     myPeer.on('call', call => {

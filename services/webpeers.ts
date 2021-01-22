@@ -46,7 +46,10 @@ const createMyPeer = () => {
 };
 
 export const showPeer = () => {
-  return myPeer;
+  if (myPeer) {
+    return myPeer;
+  }
+  return false;
 };
 
 export const openPeer = ({ room, name }) => {
@@ -57,12 +60,15 @@ export const openPeer = ({ room, name }) => {
       joinRoom(room, id, name);
     });
   }
+  return false;
 };
 
 export const subscribeCall = callback => {
-  myPeer.on('call', call => {
-    return callback(null, call);
-  });
+  if (myPeer) {
+    myPeer.on('call', call => {
+      return callback(null, call);
+    });
+  }
 
   return false;
 };
@@ -76,21 +82,28 @@ export const peerDataConnect = (userId, name) => {
 };
 
 export const subscribePeerDataConnect = callback => {
-  myPeer.on('connection', conn => {
-    return callback(null, conn);
-  });
+  if (myPeer) {
+    return myPeer.on('connection', conn => {
+      return callback(null, conn);
+    });
+  }
 
   return false;
 };
 
 export const myPeerId = () => {
-  return myPeer.id;
+  if (myPeer) {
+    return myPeer.id;
+  }
+  return false;
 };
 
 export const subscribeError = callback => {
-  myPeer.on('error', errorPeer => {
-    return callback(null, errorPeer);
-  });
+  if (myPeer) {
+    return myPeer.on('error', errorPeer => {
+      return callback(null, errorPeer);
+    });
+  }
 
   return false;
 };

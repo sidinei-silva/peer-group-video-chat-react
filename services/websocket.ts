@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { io } from 'socket.io-client';
 
 const socket = io(process.env.SOCKET_URL, {

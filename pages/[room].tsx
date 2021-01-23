@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable react/no-array-index-key */
 import {
   Box,
@@ -46,30 +47,34 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 
 import { IoHandRightOutline, IoHandRightSharp, IoEarth } from 'react-icons/io5';
+import { MdScreenShare, MdStopScreenShare } from 'react-icons/md';
 import { AiOutlineAudioMuted, AiOutlineAudio } from 'react-icons/ai';
 import getConnectionDetails from '../services/getConnectionsDetails';
-import { getMyMediaWebCam } from '../services/navegatorMedia';
+import { getMyMediaScreen, getMyMediaWebCam } from '../services/navegatorMedia';
 import {
   myPeerId,
   openPeer,
   peerCall,
+  peerRemoveAllEvents,
   showPeer,
   subscribeCall,
   subscribeError,
 } from '../services/webpeers';
 import {
   handUp,
-  sendGetUsers,
   sendMute,
+  socketIoRemoveAllEvents,
   socketSendMessage,
   socketSendNotification,
   subcribeCreateMessage,
   subcribeCreateNotification,
+  subcribeRemoveSharedScreen,
   subcribeToggleHandUp,
   subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
-  subcribeUsersInRoom,
+  userStartTransmitting,
+  userStopTransmitting,
 } from '../services/websocket';
 
 const peers = {};
@@ -98,6 +103,11 @@ interface IUser {
   isHandUp: boolean;
 }
 
+interface debugConnectionProps {
+  id: string;
+  name: string;
+}
+
 interface IConnectionCadidate {
   localAddress: string;
   hostTypeCadidate: string;
@@ -110,13 +120,21 @@ interface IConnectionCadidate {
 const RoomPage: React.FC = () => {
   const toast = useToast();
   const myVideoEl = useRef(null);
+  const myStreamScreen = useRef(null);
+  const refRemoteStreamScreen = useRef(null);
   const gridVideoEl = useRef(null);
   const [inputMessage, setInputMessage] = useState('');
   const [name, setName] = useState('');
   const [modal, setModal] = useState(true);
   const [myHandUp, setMyHandup] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
+
+  const [transmittingScreen, setTransmittingScreen] = useState(false);
+  const [remoteTransmittingScreen, setRemoteTransmittingScreen] = useState(
+    false,
+  );
 
   const [connectionsCadidates, setConnectionsCadidates] = useState<
     IConnectionCadidate[]
@@ -170,44 +188,106 @@ const RoomPage: React.FC = () => {
       return;
     }
 
+    peerRemoveAllEvents();
+    socketIoRemoveAllEvents();
+
     subscribeCall((err, call) => {
       if (err) {
         console.log(err);
         socketSendNotification(err.message);
       }
 
-      getMyMediaWebCam((errWebCam, stream) => {
-        call.answer(stream);
+      const { type: typeCall } = call.metadata;
 
-        const divElVideo = document.createElement('div');
-        divElVideo.className += 'relative';
-        divElVideo.id = call.peer;
+      if (typeCall === 'webcam') {
+        getMyMediaWebCam((errWebCam, stream) => {
+          call.answer(stream);
+          const { user: userCalling }: { user: IUser } = call.metadata;
 
-        const hostVideo = document.createElement('video');
-        hostVideo.id = `video-${call.peer}`;
+          const divElVideo = document.createElement('div');
+          divElVideo.className += 'relative';
+          divElVideo.id = call.peer;
 
-        const videoStatusElement = createVideoStatusElement(call.peer);
+          const hostVideo = document.createElement('video');
+          hostVideo.id = `video-${call.peer}`;
 
-        ReactDOM.render(videoStatusElement, divElVideo);
+          const videoStatusElement = createVideoStatusElement({
+            userId: call.peer,
+            userName: userCalling.name,
+          });
 
-        divElVideo.appendChild(hostVideo);
+          ReactDOM.render(videoStatusElement, divElVideo);
+
+          divElVideo.appendChild(hostVideo);
+
+          peers[call.peer] = call;
+
+          call.on('stream', userVideoStream => {
+            addVideoStream(divElVideo, hostVideo, userVideoStream);
+          });
+
+          addUser({
+            id: userCalling.id,
+            name: userCalling.name,
+            isHandUp: userCalling.isHandUp,
+            isMuted: userCalling.isMuted,
+          });
+
+          hostVideo.onloadedmetadata = () => {
+            debugConnection({
+              id: userCalling.id,
+              name: userCalling.name,
+            });
+            changeHandsUpElementRemote(userCalling.id, userCalling.isHandUp);
+            changeMuteElementRemote(userCalling.id, userCalling.isMuted);
+          };
+        });
+      }
+
+      if (typeCall === 'shared-screen') {
+        call.answer();
+
+        const divElementScreenShared = refRemoteStreamScreen.current;
+
+        const videoScreenShared = document.createElement('video');
+        videoScreenShared.id = `screen-shared-${call.peer}`;
+        videoScreenShared.muted = true;
+
+        divElementScreenShared.appendChild(videoScreenShared);
+
+        call.on('stream', screenStream => {
+          videoScreenShared.srcObject = screenStream;
+          videoScreenShared.autoplay = true;
+          videoScreenShared.onloadedmetadata = async () => {
+            divElementScreenShared.style.display = 'block';
+          };
+        });
 
         peers[call.peer] = call;
-
-        call.on('stream', userVideoStream => {
-          addVideoStream(divElVideo, hostVideo, userVideoStream);
-        });
-      });
+        setRemoteTransmittingScreen(true);
+      }
     });
 
-    subcribeUserConnect((err, userId) => {
+    subcribeUserConnect((err, userId, userName) => {
       if (err) {
         console.log(err);
         socketSendNotification(err.message);
       }
 
       getMyMediaWebCam((errWebCam, stream) => {
-        const call = peerCall(userId, stream);
+        // @ts-ignore
+        const call = peerCall(
+          userId,
+          stream,
+          {
+            isHandUp: myHandUp,
+            isMuted,
+            name,
+            id: myPeerId(),
+          },
+          'webcam',
+        );
+
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = userId;
@@ -215,7 +295,10 @@ const RoomPage: React.FC = () => {
         const newUserVideoElement = document.createElement('video');
         newUserVideoElement.id = `video-${userId}`;
 
-        const videoStatusElement = createVideoStatusElement(userId);
+        const videoStatusElement = createVideoStatusElement({
+          userId,
+          userName,
+        });
 
         ReactDOM.render(videoStatusElement, divElVideo);
 
@@ -224,6 +307,30 @@ const RoomPage: React.FC = () => {
         call.on('stream', userVideoStream => {
           addVideoStream(divElVideo, newUserVideoElement, userVideoStream);
         });
+
+        addUser({
+          id: userId,
+          name: userName,
+          isHandUp: false,
+          isMuted: false,
+        });
+
+        newUserVideoElement.onloadedmetadata = () => {
+          debugConnection({
+            id: userId,
+            name: userName,
+          });
+        };
+
+        const videoElementScreenShared: any = document.getElementById(
+          `screen-shared-${myPeerId()}`,
+        );
+
+        if (videoElementScreenShared) {
+          const streamSharedScreen = videoElementScreenShared.srcObject;
+          peerCall(userId, streamSharedScreen, null, 'shared-screen');
+        }
+
         peers[userId] = call;
       });
     });
@@ -235,8 +342,14 @@ const RoomPage: React.FC = () => {
         if (elementDisconnected) {
           elementDisconnected.remove();
 
-          sendGetUsers();
-          removeConnectionCadidateByUserId(userId);
+          const newUsers = users.filter(user => user.id !== userId);
+          setUsers(newUsers);
+
+          const newConnectionsCadidates = connectionsCadidates.filter(
+            connectionCandidate => connectionCandidate.remoteId !== userId,
+          );
+
+          setConnectionsCadidates(newConnectionsCadidates);
         }
       }
     });
@@ -263,42 +376,23 @@ const RoomPage: React.FC = () => {
     });
 
     subscribeError((err, errorPeer) => {
-      alert(`Ocorreu um erro com o peer: ${name}`);
+      // alert(`Ocorreu um erro com o peer: ${name}`);
       console.log(errorPeer);
     });
 
-    subcribeUsersInRoom((err, usersInRoom) => {
-      updateUser(usersInRoom);
+    subcribeRemoveSharedScreen((err, userId) => {
+      removeSharedVideoScreen(userId);
+      if (peers[userId]) {
+        peers[userId].close();
+      }
+      setRemoteTransmittingScreen(false);
     });
-  }, [modal]);
+  }, [modal, isMuted, myHandUp, users]);
 
-  useEffect(() => {
-    const gridVideo = gridVideoEl.current;
-    const idLastElement = gridVideo.lastElementChild.id;
-    const textElement = document.getElementById(`name-${idLastElement}`);
-
-    if (users.length <= 1 || users.length < gridVideo.children.length) {
-      return;
-    }
-
-    if (textElement && textElement.innerHTML !== '') {
-      return;
-    }
-
-    if (textElement && textElement.innerHTML === '') {
-      const user = users.find(userFind => userFind.id === idLastElement);
-      textElement.innerHTML = user.name;
-      changeMuteElementRemote(user.id, user.isMuted);
-      changeHandsUpElementRemote(user.id, user.isHandUp);
-      debugConnection(user);
-    }
-  }, [users]);
-
-  const debugConnection = async (user: IUser) => {
+  const debugConnection = async (user: debugConnectionProps) => {
     const peer = showPeer();
     const peerConnectionNewUser = peer.connections[user.id][0].peerConnection;
     const connectionDetails = await getConnectionDetails(peerConnectionNewUser);
-
     addConnectionCadidate({
       localAddress: connectionDetails.LocalAddress,
       hostTypeCadidate: connectionDetails.LocalCandidateType,
@@ -313,13 +407,6 @@ const RoomPage: React.FC = () => {
     scrollChatToBottom();
   }, [chatMessages]);
 
-  const updateUser = useCallback(
-    (userUpdated: IUser[]) => {
-      setUsers(userUpdated);
-    },
-    [users],
-  );
-
   const addMessage = useCallback(
     ({ authorName, message, position }: IChatMessage) => {
       setChatMessages(state => [...state, { authorName, message, position }]);
@@ -327,37 +414,38 @@ const RoomPage: React.FC = () => {
     [],
   );
 
-  const addConnectionCadidate = useCallback(
-    ({
-      localAddress,
-      hostTypeCadidate,
-      remoteId,
-      remoteAddress: remoteIp,
-      remoteName,
-      remoteTypeCadidate,
-    }: IConnectionCadidate) => {
-      setConnectionsCadidates(state => [
-        ...state,
-        {
-          localAddress,
-          hostTypeCadidate,
-          remoteId,
-          remoteAddress: remoteIp,
-          remoteName,
-          remoteTypeCadidate,
-        },
-      ]);
-    },
-    [],
-  );
+  const addUser = ({
+    id,
+    isHandUp,
+    isMuted: userIsMuted,
+    name: userName,
+  }: IUser) => {
+    setUsers(state => [
+      ...state,
+      { id, isHandUp, isMuted: userIsMuted, name: userName },
+    ]);
+  };
 
-  const removeConnectionCadidateByUserId = useCallback(({ userId }) => {
-    const newConnectionsCadidates = connectionsCadidates.filter(
-      connectionCandidate => connectionCandidate.remoteId !== userId,
-    );
-
-    setConnectionsCadidates(newConnectionsCadidates);
-  }, []);
+  const addConnectionCadidate = ({
+    localAddress,
+    hostTypeCadidate,
+    remoteId,
+    remoteAddress: remoteIp,
+    remoteName,
+    remoteTypeCadidate,
+  }: IConnectionCadidate) => {
+    setConnectionsCadidates(state => [
+      ...state,
+      {
+        localAddress,
+        hostTypeCadidate,
+        remoteId,
+        remoteAddress: remoteIp,
+        remoteName,
+        remoteTypeCadidate,
+      },
+    ]);
+  };
 
   const keyDownEnter = event => {
     if (event.which === 13) {
@@ -365,18 +453,13 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const addVideoStream = (divElVideo, videoElement, stream) => {
+  const addVideoStream = async (divElVideo, videoElement, stream) => {
     videoElement.srcObject = stream;
     videoElement.className += videoClasses;
+    videoElement.autoplay = true;
 
-    videoElement.onloadedmetadata = async () => {
-      await videoElement.play();
-      const videoGridElement = gridVideoEl.current;
-
-      videoGridElement.append(divElVideo);
-
-      sendGetUsers();
-    };
+    const videoGridElement = gridVideoEl.current;
+    videoGridElement.append(divElVideo);
   };
 
   const handleSendMessage = () => {
@@ -408,7 +491,7 @@ const RoomPage: React.FC = () => {
     return isMuted ? setIsMuted(false) : setIsMuted(true);
   };
 
-  const createVideoStatusElement = userId => {
+  const createVideoStatusElement = ({ userId, userName }) => {
     return (
       <HStack
         width="100%"
@@ -419,7 +502,9 @@ const RoomPage: React.FC = () => {
         zIndex={2}
       >
         <Box backgroundColor="white" padding="0.25rem" borderRadius="0.5rem">
-          <Text fontWeight="bold" id={`name-${userId}`} />
+          <Text fontWeight="bold" id={`name-${userId}`}>
+            {userName}
+          </Text>
         </Box>
         <Spacer />
         <Box backgroundColor="white" borderRadius="0.5rem">
@@ -471,19 +556,124 @@ const RoomPage: React.FC = () => {
     }
   };
 
+  const handleTransmittingScreen = () => {
+    const peer = showPeer();
+    const connections = Object.keys(peer.connections);
+
+    const myScreen = myStreamScreen.current;
+    if (!transmittingScreen) {
+      getMyMediaScreen((err, stream) => {
+        myScreen.style.display = 'flex';
+
+        const divElementScreenShared = refRemoteStreamScreen.current;
+        const videoScreenShared = document.createElement('video');
+        videoScreenShared.id = `screen-shared-${peer.id}`;
+        videoScreenShared.muted = true;
+        videoScreenShared.srcObject = stream;
+        divElementScreenShared.appendChild(videoScreenShared);
+
+        connections.forEach(idConnection => {
+          peerCall(idConnection, stream, null, 'shared-screen');
+        });
+
+        stream.getVideoTracks()[0].onended = function () {
+          userStopTransmitting();
+          setTransmittingScreen(false);
+        };
+
+        setTransmittingScreen(true);
+        userStartTransmitting();
+      });
+    } else {
+      userStopTransmitting();
+
+      myScreen.style.display = 'none';
+      setTransmittingScreen(false);
+    }
+  };
+
+  const removeSharedVideoScreen = peerId => {
+    const myScreen = myStreamScreen.current;
+    myScreen.style.display = 'none';
+    const divElementScreenShared = refRemoteStreamScreen.current;
+    divElementScreenShared.style.display = 'none';
+
+    const videoElementScreenShared: any = document.getElementById(
+      `screen-shared-${peerId}`,
+    );
+
+    if (videoElementScreenShared) {
+      const tracks = videoElementScreenShared.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoElementScreenShared.srcObject = null;
+      videoElementScreenShared.remove();
+    }
+  };
+
   return (
     <>
       <Container maxWidth="100%" height="100vh" p={2}>
         <Flex height="100%">
           <Box flex={1}>
             <Flex direction="column" height="100%">
+              <VStack
+                padding={4}
+                alignSelf="center"
+                backgroundColor="black"
+                ref={myStreamScreen}
+                height="300px"
+                alignItems="center"
+                justifyContent="center"
+                width="100%"
+                spacing={4}
+                display="none"
+              >
+                <VStack spacing={1}>
+                  <Box
+                    padding={2}
+                    size="4rem"
+                    marginX={1}
+                    color="blue.500"
+                    as={MdScreenShare}
+                  />
+                  <Heading size="md" color="white" textAlign="center">
+                    Você esta transmitindo
+                  </Heading>
+                </VStack>
+
+                <Button
+                  onClick={handleTransmittingScreen}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <span>Parar Transmissão</span>
+                  <Box
+                    size="2rem"
+                    marginX={1}
+                    color="red.500"
+                    as={MdStopScreenShare}
+                  />
+                </Button>
+              </VStack>
               <Grid
                 ref={gridVideoEl}
                 flex={1}
                 bgColor="black"
                 gap={4}
-                gridTemplateColumns="repeat(auto-fit, minmax(300px, 1fr))"
+                gridTemplateColumns="repeat(auto-fit, minmax(200px,1fr))"
+                gridTemplateRows="repeat(auto-fit, minmax(200px,1fr))"
+                gridAutoRows="200px"
+                gridAutoColumns="200px"
               >
+                <GridItem
+                  colSpan={4}
+                  rowSpan={3}
+                  ref={refRemoteStreamScreen}
+                  display="none"
+                />
                 <div className="relative">
                   <video className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
@@ -570,6 +760,22 @@ const RoomPage: React.FC = () => {
                     size="2rem"
                     color={isMuted ? 'red.500' : 'blue.500'}
                     as={isMuted ? AiOutlineAudioMuted : AiOutlineAudio}
+                  />
+                </Button>
+
+                <Button
+                  disabled={remoteTransmittingScreen}
+                  onClick={handleTransmittingScreen}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <Box
+                    size="2rem"
+                    color={transmittingScreen ? 'red.500' : 'blue.500'}
+                    as={transmittingScreen ? MdStopScreenShare : MdScreenShare}
                   />
                 </Button>
               </HStack>
@@ -682,7 +888,9 @@ const RoomPage: React.FC = () => {
               <Divider />
               <Accordion defaultIndex={[0]} allowMultiple>
                 {connectionsCadidates.map(candidate => (
-                  <AccordionItem>
+                  <AccordionItem
+                    key={`connection-candidate-${candidate.remoteId}`}
+                  >
                     <AccordionButton>
                       <Box flex="1" textAlign="left">
                         <Text as="span">Conectado com: </Text>
@@ -709,34 +917,34 @@ const RoomPage: React.FC = () => {
                       <UnorderedList styleType="none">
                         <ListItem>
                           <VStack align="start">
-                            <Text fontSize="sm">
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">Seu Ip:</Text>
                               <Text as="span">{candidate.localAddress}</Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">
                                 Seu tipo de conexão:
                               </Text>
                               <Text as="span">
                                 {candidate.hostTypeCadidate}
                               </Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">Id do convidado:</Text>
                               <Text as="span">{candidate.remoteId}</Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">Ip do convidado:</Text>
                               <Text as="span">{candidate.remoteAddress}</Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">
                                 Tipo de conexão do convidado:
                               </Text>
                               <Text as="span">
                                 {candidate.remoteTypeCadidate}
                               </Text>
-                            </Text>
+                            </Box>
                           </VStack>
                         </ListItem>
                       </UnorderedList>

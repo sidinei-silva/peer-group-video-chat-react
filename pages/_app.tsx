@@ -3,7 +3,6 @@ import '../styles/globals.css';
 import { AppProps } from 'next/app';
 import Head from 'next/head';
 import { ChakraProvider, theme } from '@chakra-ui/react';
-import { UsersRoomProvider } from '../context/UsersRoomContext';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -12,9 +11,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.js" />
       </Head>
       <ChakraProvider theme={theme}>
-        <UsersRoomProvider>
-          <Component {...pageProps} />
-        </UsersRoomProvider>
+        <Component {...pageProps} />
       </ChakraProvider>
     </>
   );

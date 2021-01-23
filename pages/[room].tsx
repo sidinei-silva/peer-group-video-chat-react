@@ -335,40 +335,9 @@ const RoomPage: React.FC = () => {
       removeSharedVideoScreen(userId);
       setRemoteTransmittingScreen(false);
     });
+  }, [modal, isMuted, myHandUp, users]);
 
-    subscribePeerDataConnect((err, coon) => {
-      addUser({
-        id: coon.peer,
-        name: coon.label,
-        isHandUp: false,
-        isMuted: false,
-      });
-    });
-  }, [modal]);
-
-  useEffect(() => {
-    const gridVideo = gridVideoEl.current;
-    const idLastElement = gridVideo.lastElementChild.id;
-    const textElement = document.getElementById(`name-${idLastElement}`);
-
-    if (users.length <= 1 || users.length < gridVideo.children.length) {
-      return;
-    }
-
-    if (textElement && textElement.innerHTML !== '') {
-      return;
-    }
-
-    if (textElement && textElement.innerHTML === '') {
-      const user = users.find(userFind => userFind.id === idLastElement);
-      textElement.innerHTML = user.name;
-      changeMuteElementRemote(user.id, user.isMuted);
-      changeHandsUpElementRemote(user.id, user.isHandUp);
-      debugConnection(user);
-    }
-  }, [users]);
-
-  const debugConnection = async (user: IUser) => {
+  const debugConnection = async (user: debugConnectionProps) => {
     const peer = showPeer();
     const peerConnectionNewUser = peer.connections[user.id][0].peerConnection;
     const connectionDetails = await getConnectionDetails(peerConnectionNewUser);

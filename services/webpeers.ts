@@ -1,7 +1,16 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-underscore-dangle */
 import { joinRoom } from './websocket';
 
 let Peer;
 let myPeer;
+
+interface IUser {
+  id: string;
+  name: string;
+  isMuted: boolean;
+  isHandUp: boolean;
+}
 
 const peerHost = process.env.PEER_URL;
 const peerPort = process.env.PEER_PORT || 5000;
@@ -46,7 +55,10 @@ const createMyPeer = () => {
 };
 
 export const showPeer = () => {
-  return myPeer;
+  if (myPeer) {
+    return myPeer;
+  }
+  return false;
 };
 
 export const openPeer = ({ room, name }) => {
@@ -57,28 +69,48 @@ export const openPeer = ({ room, name }) => {
       joinRoom(room, id, name);
     });
   }
+  return false;
+};
+
+export const peerRemoveAllEvents = () => {
+  if (myPeer) {
+    const eventOpen = myPeer._events.open;
+    // @ts-ignore
+    myPeer.removeAllListeners();
+    myPeer._events.open = eventOpen;
+  }
 };
 
 export const subscribeCall = callback => {
-  myPeer.on('call', call => {
-    return callback(null, call);
-  });
+  if (myPeer) {
+    myPeer.on('call', call => {
+      return callback(null, call);
+    });
+  }
 
   return false;
 };
 
-export const peerCall = (userId, stream) => {
-  return myPeer.call(userId, stream);
+export const peerCall = (userId, stream, user: IUser | null, type: string) => {
+  if (myPeer) {
+    return myPeer.call(userId, stream, { metadata: { user, type } });
+  }
+  return false;
 };
 
 export const myPeerId = () => {
-  return myPeer.id;
+  if (myPeer) {
+    return myPeer.id;
+  }
+  return false;
 };
 
 export const subscribeError = callback => {
-  myPeer.on('error', errorPeer => {
-    return callback(null, errorPeer);
-  });
+  if (myPeer) {
+    return myPeer.on('error', errorPeer => {
+      return callback(null, errorPeer);
+    });
+  }
 
   return false;
 };

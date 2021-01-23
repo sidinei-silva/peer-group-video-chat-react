@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { io } from 'socket.io-client';
 
 const socket = io(process.env.SOCKET_URL, {
@@ -6,6 +7,13 @@ const socket = io(process.env.SOCKET_URL, {
   },
 });
 
+export const socketIoRemoveAllEvents = () => {
+  if (socket) {
+    // @ts-ignore
+    socket.removeAllListeners();
+  }
+};
+
 export const joinRoom = (room, userId, name) => {
   if (socket && room) {
     socket.emit('join-room', room, userId, name);
@@ -13,19 +21,19 @@ export const joinRoom = (room, userId, name) => {
 };
 
 export const subcribeUserConnect = callback => {
-  socket.on('user-connected', userId => {
-    return callback(null, userId);
+  return socket.on('user-connected', ({ userId, userName }) => {
+    return callback(null, userId, userName);
   });
 };
 
 export const subcribeUserDisconnect = callback => {
-  socket.on('user-disconnected', userId => {
+  return socket.on('user-disconnected', userId => {
     return callback(null, userId);
   });
 };
 
 export const subcribeCreateMessage = callback => {
-  socket.on('create-message', ({ name, message }) => {
+  return socket.on('create-message', ({ name, message }) => {
     return callback(null, name, message);
   });
 };
@@ -35,7 +43,7 @@ export const socketSendMessage = (name, message) => {
 };
 
 export const subcribeToggleHandUp = callback => {
-  socket.on('toggle-hand-up', ({ userId, isHandUp }) => {
+  return socket.on('toggle-hand-up', ({ userId, isHandUp }) => {
     return callback(null, userId, isHandUp);
   });
 };
@@ -49,29 +57,19 @@ export const socketSendNotification = notification => {
 };
 
 export const subcribeCreateNotification = callback => {
-  socket.on('create-notification', ({ notification }) => {
+  return socket.on('create-notification', ({ notification }) => {
     return callback(null, notification);
   });
 };
 
 export const subcribeToggleMute = callback => {
-  socket.on('toggle-mute', ({ userId, isMute }) => {
+  return socket.on('toggle-mute', ({ userId, isMute }) => {
     return callback(null, userId, isMute);
   });
 };
 
 export const sendMute = (userId, isMute) => {
   socket.emit('mute', { userId, isMute });
-};
-
-export const subcribeUsersInRoom = callback => {
-  socket.on('users-in-room', ({ users: usersInRoom }) => {
-    return callback(null, usersInRoom);
-  });
-};
-
-export const sendGetUsers = () => {
-  socket.emit('get-users', {});
 };
 
 export const userStartTransmitting = () => {
@@ -83,7 +81,7 @@ export const userStopTransmitting = () => {
 };
 
 export const subcribeRemoveSharedScreen = callback => {
-  socket.on('remove-shared-screen', ({ userId }) => {
+  return socket.on('remove-shared-screen', ({ userId }) => {
     return callback(null, userId);
   });
 };

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable react/no-array-index-key */
 import {
   Box,
@@ -54,14 +55,15 @@ import {
   myPeerId,
   openPeer,
   peerCall,
+  peerRemoveAllEvents,
   showPeer,
   subscribeCall,
   subscribeError,
 } from '../services/webpeers';
 import {
   handUp,
-  sendGetUsers,
   sendMute,
+  socketIoRemoveAllEvents,
   socketSendMessage,
   socketSendNotification,
   subcribeCreateMessage,
@@ -71,7 +73,6 @@ import {
   subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
-  subcribeUsersInRoom,
   userStartTransmitting,
   userStopTransmitting,
 } from '../services/websocket';
@@ -102,6 +103,11 @@ interface IUser {
   isHandUp: boolean;
 }
 
+interface debugConnectionProps {
+  id: string;
+  name: string;
+}
+
 interface IConnectionCadidate {
   localAddress: string;
   hostTypeCadidate: string;
@@ -122,6 +128,7 @@ const RoomPage: React.FC = () => {
   const [modal, setModal] = useState(true);
   const [myHandUp, setMyHandup] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
 
   const [transmittingScreen, setTransmittingScreen] = useState(false);
@@ -181,12 +188,14 @@ const RoomPage: React.FC = () => {
       return;
     }
 
+    peerRemoveAllEvents();
+    socketIoRemoveAllEvents();
+
     subscribeCall((err, call) => {
       if (err) {
         console.log(err);
         socketSendNotification(err.message);
       }
-
       const peer = showPeer();
       const peerMediasStream = peer.connections[call.peer];
 
@@ -203,15 +212,15 @@ const RoomPage: React.FC = () => {
 
         call.on('stream', screenStream => {
           videoScreenShared.srcObject = screenStream;
+          videoScreenShared.autoplay = true;
           videoScreenShared.onloadedmetadata = async () => {
-            await videoScreenShared.play();
             divElementScreenShared.style.display = 'block';
-            setRemoteTransmittingScreen(true);
           };
         });
       } else {
         getMyMediaWebCam((errWebCam, stream) => {
           call.answer(stream);
+          const { user: userCalling }: { user: IUser } = call.metadata;
 
           const divElVideo = document.createElement('div');
           divElVideo.className += 'relative';
@@ -220,7 +229,10 @@ const RoomPage: React.FC = () => {
           const hostVideo = document.createElement('video');
           hostVideo.id = `video-${call.peer}`;
 
-          const videoStatusElement = createVideoStatusElement(call.peer);
+          const videoStatusElement = createVideoStatusElement({
+            userId: call.peer,
+            userName: userCalling.name,
+          });
 
           ReactDOM.render(videoStatusElement, divElVideo);
 
@@ -231,18 +243,46 @@ const RoomPage: React.FC = () => {
           call.on('stream', userVideoStream => {
             addVideoStream(divElVideo, hostVideo, userVideoStream);
           });
+
+          addUser({
+            id: userCalling.id,
+            name: userCalling.name,
+            isHandUp: userCalling.isHandUp,
+            isMuted: userCalling.isMuted,
+          });
+
+          hostVideo.onloadedmetadata = () => {
+            debugConnection({
+              id: userCalling.id,
+              name: userCalling.name,
+            });
+            changeHandsUpElementRemote(userCalling.id, userCalling.isHandUp);
+            changeMuteElementRemote(userCalling.id, userCalling.isMuted);
+          };
         });
       }
     });
 
-    subcribeUserConnect((err, userId) => {
+    subcribeUserConnect((err, userId, userName) => {
       if (err) {
         console.log(err);
         socketSendNotification(err.message);
       }
 
       getMyMediaWebCam((errWebCam, stream) => {
-        const call = peerCall(userId, stream);
+        // @ts-ignore
+        const call = peerCall(
+          userId,
+          stream,
+          {
+            isHandUp: myHandUp,
+            isMuted,
+            name,
+            id: myPeerId(),
+          },
+          'webcam',
+        );
+
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
         divElVideo.id = userId;
@@ -250,7 +290,10 @@ const RoomPage: React.FC = () => {
         const newUserVideoElement = document.createElement('video');
         newUserVideoElement.id = `video-${userId}`;
 
-        const videoStatusElement = createVideoStatusElement(userId);
+        const videoStatusElement = createVideoStatusElement({
+          userId,
+          userName,
+        });
 
         ReactDOM.render(videoStatusElement, divElVideo);
 
@@ -260,19 +303,33 @@ const RoomPage: React.FC = () => {
           addVideoStream(divElVideo, newUserVideoElement, userVideoStream);
         });
 
-        peers[userId] = call;
+        addUser({
+          id: userId,
+          name: userName,
+          isHandUp: false,
+          isMuted: false,
+        });
 
         newUserVideoElement.onloadedmetadata = () => {
-          const peerId = myPeerId();
-          const videoElementScreenShared: any = document.getElementById(
-            `screen-shared-${peerId}`,
-          );
-
-          if (videoElementScreenShared) {
-            const streamSharedScreen = videoElementScreenShared.srcObject;
-            peerCall(userId, streamSharedScreen);
-          }
+          debugConnection({
+            id: userId,
+            name: userName,
+          });
         };
+
+        peers[userId] = call;
+
+        const peerId = myPeerId();
+        const videoElementScreenShared: any = document.getElementById(
+          `screen-shared-${peerId}`,
+        );
+
+        if (videoElementScreenShared) {
+          newUserVideoElement.onloadedmetadata = () => {
+            const streamSharedScreen = videoElementScreenShared.srcObject;
+            peerCall(userId, streamSharedScreen, null, 'shared-screen');
+          };
+        }
       });
     });
 
@@ -283,8 +340,14 @@ const RoomPage: React.FC = () => {
         if (elementDisconnected) {
           elementDisconnected.remove();
 
-          sendGetUsers();
-          removeConnectionCadidateByUserId(userId);
+          const newUsers = users.filter(user => user.id !== userId);
+          setUsers(newUsers);
+
+          const newConnectionsCadidates = connectionsCadidates.filter(
+            connectionCandidate => connectionCandidate.remoteId !== userId,
+          );
+
+          setConnectionsCadidates(newConnectionsCadidates);
         }
       }
     });
@@ -311,47 +374,19 @@ const RoomPage: React.FC = () => {
     });
 
     subscribeError((err, errorPeer) => {
-      alert(`Ocorreu um erro com o peer: ${name}`);
+      // alert(`Ocorreu um erro com o peer: ${name}`);
       console.log(errorPeer);
-    });
-
-    subcribeUsersInRoom((err, usersInRoom) => {
-      updateUser(usersInRoom);
     });
 
     subcribeRemoveSharedScreen((err, userId) => {
       removeSharedVideoScreen(userId);
-      setRemoteTransmittingScreen(false);
     });
-  }, [modal]);
+  }, [modal, isMuted, myHandUp, users]);
 
-  useEffect(() => {
-    const gridVideo = gridVideoEl.current;
-    const idLastElement = gridVideo.lastElementChild.id;
-    const textElement = document.getElementById(`name-${idLastElement}`);
-
-    if (users.length <= 1 || users.length < gridVideo.children.length) {
-      return;
-    }
-
-    if (textElement && textElement.innerHTML !== '') {
-      return;
-    }
-
-    if (textElement && textElement.innerHTML === '') {
-      const user = users.find(userFind => userFind.id === idLastElement);
-      textElement.innerHTML = user.name;
-      changeMuteElementRemote(user.id, user.isMuted);
-      changeHandsUpElementRemote(user.id, user.isHandUp);
-      debugConnection(user);
-    }
-  }, [users]);
-
-  const debugConnection = async (user: IUser) => {
+  const debugConnection = async (user: debugConnectionProps) => {
     const peer = showPeer();
     const peerConnectionNewUser = peer.connections[user.id][0].peerConnection;
     const connectionDetails = await getConnectionDetails(peerConnectionNewUser);
-
     addConnectionCadidate({
       localAddress: connectionDetails.LocalAddress,
       hostTypeCadidate: connectionDetails.LocalCandidateType,
@@ -366,13 +401,6 @@ const RoomPage: React.FC = () => {
     scrollChatToBottom();
   }, [chatMessages]);
 
-  const updateUser = useCallback(
-    (userUpdated: IUser[]) => {
-      setUsers(userUpdated);
-    },
-    [users],
-  );
-
   const addMessage = useCallback(
     ({ authorName, message, position }: IChatMessage) => {
       setChatMessages(state => [...state, { authorName, message, position }]);
@@ -380,37 +408,38 @@ const RoomPage: React.FC = () => {
     [],
   );
 
-  const addConnectionCadidate = useCallback(
-    ({
-      localAddress,
-      hostTypeCadidate,
-      remoteId,
-      remoteAddress: remoteIp,
-      remoteName,
-      remoteTypeCadidate,
-    }: IConnectionCadidate) => {
-      setConnectionsCadidates(state => [
-        ...state,
-        {
-          localAddress,
-          hostTypeCadidate,
-          remoteId,
-          remoteAddress: remoteIp,
-          remoteName,
-          remoteTypeCadidate,
-        },
-      ]);
-    },
-    [],
-  );
+  const addUser = ({
+    id,
+    isHandUp,
+    isMuted: userIsMuted,
+    name: userName,
+  }: IUser) => {
+    setUsers(state => [
+      ...state,
+      { id, isHandUp, isMuted: userIsMuted, name: userName },
+    ]);
+  };
 
-  const removeConnectionCadidateByUserId = useCallback(({ userId }) => {
-    const newConnectionsCadidates = connectionsCadidates.filter(
-      connectionCandidate => connectionCandidate.remoteId !== userId,
-    );
-
-    setConnectionsCadidates(newConnectionsCadidates);
-  }, []);
+  const addConnectionCadidate = ({
+    localAddress,
+    hostTypeCadidate,
+    remoteId,
+    remoteAddress: remoteIp,
+    remoteName,
+    remoteTypeCadidate,
+  }: IConnectionCadidate) => {
+    setConnectionsCadidates(state => [
+      ...state,
+      {
+        localAddress,
+        hostTypeCadidate,
+        remoteId,
+        remoteAddress: remoteIp,
+        remoteName,
+        remoteTypeCadidate,
+      },
+    ]);
+  };
 
   const keyDownEnter = event => {
     if (event.which === 13) {
@@ -423,10 +452,8 @@ const RoomPage: React.FC = () => {
     videoElement.className += videoClasses;
     videoElement.autoplay = true;
 
-    await videoElement.play();
     const videoGridElement = gridVideoEl.current;
     videoGridElement.append(divElVideo);
-    sendGetUsers();
   };
 
   const handleSendMessage = () => {
@@ -458,7 +485,7 @@ const RoomPage: React.FC = () => {
     return isMuted ? setIsMuted(false) : setIsMuted(true);
   };
 
-  const createVideoStatusElement = userId => {
+  const createVideoStatusElement = ({ userId, userName }) => {
     return (
       <HStack
         width="100%"
@@ -469,7 +496,9 @@ const RoomPage: React.FC = () => {
         zIndex={2}
       >
         <Box backgroundColor="white" padding="0.25rem" borderRadius="0.5rem">
-          <Text fontWeight="bold" id={`name-${userId}`} />
+          <Text fontWeight="bold" id={`name-${userId}`}>
+            {userName}
+          </Text>
         </Box>
         <Spacer />
         <Box backgroundColor="white" borderRadius="0.5rem">
@@ -538,7 +567,7 @@ const RoomPage: React.FC = () => {
         divElementScreenShared.appendChild(videoScreenShared);
 
         connections.forEach(idConnection => {
-          peerCall(idConnection, stream);
+          peerCall(idConnection, stream, null, 'shared-screen');
         });
 
         stream.getVideoTracks()[0].onended = function () {
@@ -853,7 +882,9 @@ const RoomPage: React.FC = () => {
               <Divider />
               <Accordion defaultIndex={[0]} allowMultiple>
                 {connectionsCadidates.map(candidate => (
-                  <AccordionItem>
+                  <AccordionItem
+                    key={`connection-candidate-${candidate.remoteId}`}
+                  >
                     <AccordionButton>
                       <Box flex="1" textAlign="left">
                         <Text as="span">Conectado com: </Text>
@@ -880,34 +911,34 @@ const RoomPage: React.FC = () => {
                       <UnorderedList styleType="none">
                         <ListItem>
                           <VStack align="start">
-                            <Text fontSize="sm">
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">Seu Ip:</Text>
                               <Text as="span">{candidate.localAddress}</Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">
                                 Seu tipo de conexão:
                               </Text>
                               <Text as="span">
                                 {candidate.hostTypeCadidate}
                               </Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">Id do convidado:</Text>
                               <Text as="span">{candidate.remoteId}</Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">Ip do convidado:</Text>
                               <Text as="span">{candidate.remoteAddress}</Text>
-                            </Text>
-                            <Text fontSize="sm">
+                            </Box>
+                            <Box fontSize="sm">
                               <Text fontWeight="bold">
                                 Tipo de conexão do convidado:
                               </Text>
                               <Text as="span">
                                 {candidate.remoteTypeCadidate}
                               </Text>
-                            </Text>
+                            </Box>
                           </VStack>
                         </ListItem>
                       </UnorderedList>

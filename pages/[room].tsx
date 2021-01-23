@@ -196,28 +196,10 @@ const RoomPage: React.FC = () => {
         console.log(err);
         socketSendNotification(err.message);
       }
-      const peer = showPeer();
-      const peerMediasStream = peer.connections[call.peer];
 
-      if (peerMediasStream.length > 1) {
-        call.answer();
+      const { type: typeCall } = call.metadata;
 
-        const divElementScreenShared = refRemoteStreamScreen.current;
-
-        const videoScreenShared = document.createElement('video');
-        videoScreenShared.id = `screen-shared-${call.peer}`;
-        videoScreenShared.muted = true;
-
-        divElementScreenShared.appendChild(videoScreenShared);
-
-        call.on('stream', screenStream => {
-          videoScreenShared.srcObject = screenStream;
-          videoScreenShared.autoplay = true;
-          videoScreenShared.onloadedmetadata = async () => {
-            divElementScreenShared.style.display = 'block';
-          };
-        });
-      } else {
+      if (typeCall === 'webcam') {
         getMyMediaWebCam((errWebCam, stream) => {
           call.answer(stream);
           const { user: userCalling }: { user: IUser } = call.metadata;
@@ -260,6 +242,29 @@ const RoomPage: React.FC = () => {
             changeMuteElementRemote(userCalling.id, userCalling.isMuted);
           };
         });
+      }
+
+      if (typeCall === 'shared-screen') {
+        call.answer();
+
+        const divElementScreenShared = refRemoteStreamScreen.current;
+
+        const videoScreenShared = document.createElement('video');
+        videoScreenShared.id = `screen-shared-${call.peer}`;
+        videoScreenShared.muted = true;
+
+        divElementScreenShared.appendChild(videoScreenShared);
+
+        call.on('stream', screenStream => {
+          videoScreenShared.srcObject = screenStream;
+          videoScreenShared.autoplay = true;
+          videoScreenShared.onloadedmetadata = async () => {
+            divElementScreenShared.style.display = 'block';
+          };
+        });
+
+        peers[call.peer] = call;
+        setRemoteTransmittingScreen(true);
       }
     });
 
@@ -317,19 +322,16 @@ const RoomPage: React.FC = () => {
           });
         };
 
-        peers[userId] = call;
-
-        const peerId = myPeerId();
         const videoElementScreenShared: any = document.getElementById(
-          `screen-shared-${peerId}`,
+          `screen-shared-${myPeerId()}`,
         );
 
         if (videoElementScreenShared) {
-          newUserVideoElement.onloadedmetadata = () => {
-            const streamSharedScreen = videoElementScreenShared.srcObject;
-            peerCall(userId, streamSharedScreen, null, 'shared-screen');
-          };
+          const streamSharedScreen = videoElementScreenShared.srcObject;
+          peerCall(userId, streamSharedScreen, null, 'shared-screen');
         }
+
+        peers[userId] = call;
       });
     });
 
@@ -380,6 +382,10 @@ const RoomPage: React.FC = () => {
 
     subcribeRemoveSharedScreen((err, userId) => {
       removeSharedVideoScreen(userId);
+      if (peers[userId]) {
+        peers[userId].close();
+      }
+      setRemoteTransmittingScreen(false);
     });
   }, [modal, isMuted, myHandUp, users]);
 

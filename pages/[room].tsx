@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable react/no-array-index-key */
 import {
   Box,
@@ -245,14 +246,18 @@ const RoomPage: React.FC = () => {
       }
 
       getMyMediaWebCam((errWebCam, stream) => {
-        const call = peerCall(userId, stream);
-        peerDataConnect(userId, name);
-        addUser({
-          id: userId,
-          name: userName,
-          isHandUp: false,
-          isMuted: false,
-        });
+        // @ts-ignore
+        const call = peerCall(
+          userId,
+          stream,
+          {
+            isHandUp: myHandUp,
+            isMuted,
+            name,
+            id: myPeerId(),
+          },
+          'webcam',
+        );
 
         const divElVideo = document.createElement('div');
         divElVideo.className += 'relative';
@@ -284,9 +289,7 @@ const RoomPage: React.FC = () => {
 
           if (videoElementScreenShared) {
             const streamSharedScreen = videoElementScreenShared.srcObject;
-            peerCall(userId, streamSharedScreen);
-          }
-        };
+            peerCall(userId, streamSharedScreen, null, 'shared-screen');
       });
     });
 
@@ -560,7 +563,7 @@ const RoomPage: React.FC = () => {
         divElementScreenShared.appendChild(videoScreenShared);
 
         connections.forEach(idConnection => {
-          peerCall(idConnection, stream);
+          peerCall(idConnection, stream, null, 'shared-screen');
         });
 
         stream.getVideoTracks()[0].onended = function () {

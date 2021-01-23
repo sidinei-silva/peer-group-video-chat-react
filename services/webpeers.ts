@@ -1,7 +1,16 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-underscore-dangle */
 import { joinRoom } from './websocket';
 
 let Peer;
 let myPeer;
+
+interface IUser {
+  id: string;
+  name: string;
+  isMuted: boolean;
+  isHandUp: boolean;
+}
 
 const peerHost = process.env.PEER_URL;
 const peerPort = process.env.PEER_PORT || 5000;
@@ -82,21 +91,10 @@ export const subscribeCall = callback => {
   return false;
 };
 
-export const peerCall = (userId, stream) => {
-  return myPeer.call(userId, stream);
-};
-
-export const peerDataConnect = (userId, name) => {
-  return myPeer.connect(userId, { label: name });
-};
-
-export const subscribePeerDataConnect = callback => {
+export const peerCall = (userId, stream, user: IUser | null, type: string) => {
   if (myPeer) {
-    return myPeer.on('connection', conn => {
-      return callback(null, conn);
-    });
+    return myPeer.call(userId, stream, { metadata: { user, type } });
   }
-
   return false;
 };
 

@@ -129,6 +129,7 @@ interface IConnectionCadidate {
 const RoomPage: React.FC = () => {
   const toast = useToast();
   const myVideoEl = useRef(null);
+  const myVideoInitialEl = useRef(null);
   const myStreamScreen = useRef(null);
   const refRemoteStreamScreen = useRef(null);
   const gridVideoEl = useRef(null);
@@ -187,6 +188,11 @@ const RoomPage: React.FC = () => {
       return;
     }
     getMyMediaWebCam((err, stream) => {
+      const videoInitial = myVideoInitialEl.current;
+      videoInitial.srcObject = stream;
+      videoInitial.play();
+      videoInitial.muted = true;
+
       const video = myVideoEl.current;
       video.srcObject = stream;
       video.play();
@@ -325,9 +331,9 @@ const RoomPage: React.FC = () => {
         addUser({
           id: userId,
           name: userName,
-          isHandUp: false,
-          isMuted: false,
-          isDisableCam: false,
+          isHandUp: myHandUp,
+          isMuted,
+          isDisableCam,
         });
 
         newUserVideoElement.onloadedmetadata = () => {
@@ -517,6 +523,16 @@ const RoomPage: React.FC = () => {
       myVideoElement.style.display = 'block';
     }
 
+    if (modal) {
+      const videoInitial = myVideoInitialEl.current;
+
+      if (!isDisableCam) {
+        videoInitial.style.display = 'none';
+      } else {
+        videoInitial.style.display = 'block';
+      }
+    }
+
     return isDisableCam ? setIsDisableCam(false) : setIsDisableCam(true);
   };
 
@@ -676,7 +692,12 @@ const RoomPage: React.FC = () => {
 
   return (
     <>
-      <Container maxWidth="100%" height="100vh" p={2}>
+      <Container
+        maxWidth="100%"
+        height="100vh"
+        p={2}
+        display={modal ? 'none' : 'block'}
+      >
         <Flex height="100%">
           <Box flex={1}>
             <Flex direction="column" height="100%">
@@ -949,14 +970,65 @@ const RoomPage: React.FC = () => {
         <ModalContent>
           <ModalHeader>Necessário nome de usuário</ModalHeader>
           <ModalBody pb={6}>
-            <FormControl>
-              <Input
-                size="lg"
-                value={name}
-                placeholder="Insira seu nome"
-                onChange={e => setName(e.target.value)}
-              />
-            </FormControl>
+            <VStack>
+              <FormControl>
+                <Input
+                  size="lg"
+                  value={name}
+                  placeholder="Insira seu nome"
+                  onChange={e => setName(e.target.value)}
+                />
+              </FormControl>
+              <Box>
+                <Flex
+                  justify="center"
+                  alignItems="center"
+                  width="100%"
+                  height="100%"
+                  display={!isDisableCam ? 'none' : 'flex'}
+                >
+                  <img
+                    style={{ borderRadius: '50%' }}
+                    src={`https://icotar.com/initials/${name}.svg`}
+                    alt=""
+                  />
+                </Flex>
+                <video className={videoClasses} ref={myVideoInitialEl}>
+                  <track kind="captions" srcLang="pt-BR" />
+                </video>
+                <HStack width="100%" p={2} backgroundColor="white">
+                  <Button
+                    onClick={handleIsMuted}
+                    type="button"
+                    _hover={{
+                      border: 'blue',
+                    }}
+                    _focus={{ boxShadow: 'sm', outline: 'none' }}
+                  >
+                    <Box
+                      size="2rem"
+                      color={isMuted ? 'red.500' : 'blue.500'}
+                      as={isMuted ? AiOutlineAudioMuted : AiOutlineAudio}
+                    />
+                  </Button>
+
+                  <Button
+                    onClick={handleIsDisableCam}
+                    type="button"
+                    _hover={{
+                      border: 'blue',
+                    }}
+                    _focus={{ boxShadow: 'sm', outline: 'none' }}
+                  >
+                    <Box
+                      size="2rem"
+                      color={isDisableCam ? 'red.500' : 'blue.500'}
+                      as={isDisableCam ? MdVideocamOff : MdVideocam}
+                    />
+                  </Button>
+                </HStack>
+              </Box>
+            </VStack>
           </ModalBody>
 
           <ModalFooter>

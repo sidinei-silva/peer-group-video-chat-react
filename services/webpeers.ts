@@ -10,6 +10,7 @@ interface IUser {
   name: string;
   isMuted: boolean;
   isHandUp: boolean;
+  isDisableCam: boolean;
 }
 
 const peerHost = process.env.PEER_URL;

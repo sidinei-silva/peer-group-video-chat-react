@@ -534,13 +534,13 @@ const RoomPage: React.FC = () => {
   };
 
   const changeMuteElementRemote = (userId, isMutedParamns) => {
+    const myPeer = showPeer();
+
+    const mediaConnection = myPeer.connections[userId][0];
+
+    mediaConnection.remoteStream.getAudioTracks()[0].enabled = !isMutedParamns;
+
     const mutedUser = document.getElementById(`microphone-${userId}`);
-
-    const videoUser = document.getElementById(`video-${userId}`);
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    videoUser.muted = isMutedParamns;
 
     if (isMutedParamns) {
       mutedUser.style.display = 'block';

@@ -161,6 +161,7 @@ const RoomPage: React.FC = () => {
     if (room && modal && name.length > 0) {
       setModal(false);
       openPeer({ room, name });
+      toast.closeAll();
       toast({
         description: 'Bem vindx a sala!',
         duration: 3000,
@@ -367,6 +368,7 @@ const RoomPage: React.FC = () => {
     });
 
     subcribeCreateNotification((err, notification) => {
+      toast.closeAll();
       toast({
         description: notification,
         duration: 3000,

@@ -85,3 +85,13 @@ export const subcribeRemoveSharedScreen = callback => {
     return callback(null, userId);
   });
 };
+
+export const subscribeToggleCam = callback => {
+  return socket.on('toggle-cam', ({ userId, isDisableCam }) => {
+    return callback(null, userId, isDisableCam);
+  });
+};
+
+export const sendDisableCam = (userId, isDisableCam) => {
+  socket.emit('disable-cam', { userId, isDisableCam });
+};

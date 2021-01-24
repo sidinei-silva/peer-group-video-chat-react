@@ -40,6 +40,7 @@ import {
   AccordionButton,
   AccordionIcon,
   AccordionPanel,
+  Avatar,
 } from '@chakra-ui/react';
 import { useRouter } from 'next/dist/client/router';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
@@ -47,7 +48,12 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 
 import { IoHandRightOutline, IoHandRightSharp, IoEarth } from 'react-icons/io5';
-import { MdScreenShare, MdStopScreenShare } from 'react-icons/md';
+import {
+  MdScreenShare,
+  MdStopScreenShare,
+  MdVideocam,
+  MdVideocamOff,
+} from 'react-icons/md';
 import { AiOutlineAudioMuted, AiOutlineAudio } from 'react-icons/ai';
 import getConnectionDetails from '../services/getConnectionsDetails';
 import { getMyMediaScreen, getMyMediaWebCam } from '../services/navegatorMedia';
@@ -62,6 +68,7 @@ import {
 } from '../services/webpeers';
 import {
   handUp,
+  sendDisableCam,
   sendMute,
   socketIoRemoveAllEvents,
   socketSendMessage,
@@ -73,6 +80,7 @@ import {
   subcribeToggleMute,
   subcribeUserConnect,
   subcribeUserDisconnect,
+  subscribeToggleCam,
   userStartTransmitting,
   userStopTransmitting,
 } from '../services/websocket';
@@ -101,6 +109,7 @@ interface IUser {
   name: string;
   isMuted: boolean;
   isHandUp: boolean;
+  isDisableCam: boolean;
 }
 
 interface debugConnectionProps {
@@ -128,6 +137,7 @@ const RoomPage: React.FC = () => {
   const [modal, setModal] = useState(true);
   const [myHandUp, setMyHandup] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isDisableCam, setIsDisableCam] = useState(false);
 
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
 
@@ -161,6 +171,7 @@ const RoomPage: React.FC = () => {
     if (room && modal && name.length > 0) {
       setModal(false);
       openPeer({ room, name });
+      toast.closeAll();
       toast({
         description: 'Bem vindx a sala!',
         duration: 3000,
@@ -231,6 +242,7 @@ const RoomPage: React.FC = () => {
             name: userCalling.name,
             isHandUp: userCalling.isHandUp,
             isMuted: userCalling.isMuted,
+            isDisableCam: userCalling.isDisableCam,
           });
 
           hostVideo.onloadedmetadata = () => {
@@ -240,6 +252,7 @@ const RoomPage: React.FC = () => {
             });
             changeHandsUpElementRemote(userCalling.id, userCalling.isHandUp);
             changeMuteElementRemote(userCalling.id, userCalling.isMuted);
+            changeCamElementRemote(userCalling.id, userCalling.isDisableCam);
           };
         });
       }
@@ -280,6 +293,7 @@ const RoomPage: React.FC = () => {
           userId,
           stream,
           {
+            isDisableCam,
             isHandUp: myHandUp,
             isMuted,
             name,
@@ -313,6 +327,7 @@ const RoomPage: React.FC = () => {
           name: userName,
           isHandUp: false,
           isMuted: false,
+          isDisableCam: false,
         });
 
         newUserVideoElement.onloadedmetadata = () => {
@@ -366,7 +381,12 @@ const RoomPage: React.FC = () => {
       changeMuteElementRemote(userId, isMutedParamns);
     });
 
+    subscribeToggleCam((err, userId, isDisableCamParams) => {
+      changeCamElementRemote(userId, isDisableCamParams);
+    });
+
     subcribeCreateNotification((err, notification) => {
+      toast.closeAll();
       toast({
         description: notification,
         duration: 3000,
@@ -387,7 +407,7 @@ const RoomPage: React.FC = () => {
       }
       setRemoteTransmittingScreen(false);
     });
-  }, [modal, isMuted, myHandUp, users]);
+  }, [modal, isMuted, myHandUp, users, isDisableCam]);
 
   const debugConnection = async (user: debugConnectionProps) => {
     const peer = showPeer();
@@ -414,16 +434,8 @@ const RoomPage: React.FC = () => {
     [],
   );
 
-  const addUser = ({
-    id,
-    isHandUp,
-    isMuted: userIsMuted,
-    name: userName,
-  }: IUser) => {
-    setUsers(state => [
-      ...state,
-      { id, isHandUp, isMuted: userIsMuted, name: userName },
-    ]);
+  const addUser = (user: IUser) => {
+    setUsers(state => [...state, user]);
   };
 
   const addConnectionCadidate = ({
@@ -491,59 +503,111 @@ const RoomPage: React.FC = () => {
     return isMuted ? setIsMuted(false) : setIsMuted(true);
   };
 
+  const handleIsDisableCam = () => {
+    const myId = myPeerId();
+    sendDisableCam(myId, !isDisableCam);
+
+    const myVideoElement = myVideoEl.current;
+    const streamMyVideo = myVideoElement.srcObject;
+    streamMyVideo.getVideoTracks()[0].enabled = isDisableCam;
+
+    if (!isDisableCam) {
+      myVideoElement.style.display = 'none';
+    } else {
+      myVideoElement.style.display = 'block';
+    }
+
+    return isDisableCam ? setIsDisableCam(false) : setIsDisableCam(true);
+  };
+
   const createVideoStatusElement = ({ userId, userName }) => {
     return (
-      <HStack
-        width="100%"
-        position="absolute"
-        bottom={0}
-        right={0}
-        padding="0.5rem"
-        zIndex={2}
-      >
-        <Box backgroundColor="white" padding="0.25rem" borderRadius="0.5rem">
-          <Text fontWeight="bold" id={`name-${userId}`}>
-            {userName}
-          </Text>
-        </Box>
-        <Spacer />
-        <Box backgroundColor="white" borderRadius="0.5rem">
-          <Box
-            id={`handle-${userId}`}
-            display="none"
-            padding="0.25rem"
-            size="3rem"
-            color="#3182ce"
-            as={IoHandRightSharp}
+      <>
+        <Flex
+          id={`avatar-${userId}`}
+          justify="center"
+          alignItems="center"
+          width="100%"
+          height="100%"
+          display="none"
+        >
+          <img
+            style={{ borderRadius: '50%' }}
+            src={`https://icotar.com/initials/${userName}.svg`}
+            alt=""
           />
-        </Box>
-        <Box backgroundColor="white" borderRadius="0.5rem">
-          <Box
-            id={`microphone-${userId}`}
-            display="none"
-            padding="0.25rem"
-            size="3rem"
-            color="#E53E3E"
-            as={AiOutlineAudioMuted}
-          />
-        </Box>
-      </HStack>
+        </Flex>
+        <HStack
+          width="100%"
+          position="absolute"
+          bottom={0}
+          right={0}
+          padding="0.5rem"
+          zIndex={2}
+        >
+          <Box backgroundColor="white" padding="0.25rem" borderRadius="0.5rem">
+            <Text fontWeight="bold" id={`name-${userId}`}>
+              {userName}
+            </Text>
+          </Box>
+          <Spacer />
+          <Box backgroundColor="white" borderRadius="0.5rem">
+            <Box
+              id={`handle-${userId}`}
+              display="none"
+              padding="0.25rem"
+              size="3rem"
+              color="#3182ce"
+              as={IoHandRightSharp}
+            />
+          </Box>
+          <Box backgroundColor="white" borderRadius="0.5rem">
+            <Box
+              id={`microphone-${userId}`}
+              display="none"
+              padding="0.25rem"
+              size="3rem"
+              color="#E53E3E"
+              as={AiOutlineAudioMuted}
+            />
+          </Box>
+        </HStack>
+      </>
     );
   };
 
   const changeMuteElementRemote = (userId, isMutedParamns) => {
+    const myPeer = showPeer();
+
+    const mediaConnection = myPeer.connections[userId][0];
+
+    mediaConnection.remoteStream.getAudioTracks()[0].enabled = !isMutedParamns;
+
     const mutedUser = document.getElementById(`microphone-${userId}`);
-
-    const videoUser = document.getElementById(`video-${userId}`);
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    videoUser.muted = isMutedParamns;
 
     if (isMutedParamns) {
       mutedUser.style.display = 'block';
     } else {
       mutedUser.style.display = 'none';
+    }
+  };
+
+  const changeCamElementRemote = (userId, isDisableCamParamns) => {
+    const myPeer = showPeer();
+
+    const mediaConnection = myPeer.connections[userId][0];
+
+    mediaConnection.remoteStream.getVideoTracks()[0].enabled = !isDisableCamParamns;
+
+    const videoElementRemote = document.getElementById(`video-${userId}`);
+    const avatarElementRemote = document.getElementById(`avatar-${userId}`);
+
+    if (isDisableCamParamns) {
+      videoElementRemote.style.display = 'none';
+      avatarElementRemote.style.display = 'flex';
+    } else {
+      videoElementRemote.style.display = 'block';
+      avatarElementRemote.style.display = 'none';
     }
   };
 
@@ -675,6 +739,19 @@ const RoomPage: React.FC = () => {
                   display="none"
                 />
                 <div className="relative">
+                  <Flex
+                    justify="center"
+                    alignItems="center"
+                    width="100%"
+                    height="100%"
+                    display={!isDisableCam ? 'none' : 'flex'}
+                  >
+                    <img
+                      style={{ borderRadius: '50%' }}
+                      src={`https://icotar.com/initials/${name}.svg`}
+                      alt=""
+                    />
+                  </Flex>
                   <video className={videoClasses} ref={myVideoEl}>
                     <track kind="captions" srcLang="pt-BR" />
                   </video>
@@ -760,6 +837,21 @@ const RoomPage: React.FC = () => {
                     size="2rem"
                     color={isMuted ? 'red.500' : 'blue.500'}
                     as={isMuted ? AiOutlineAudioMuted : AiOutlineAudio}
+                  />
+                </Button>
+
+                <Button
+                  onClick={handleIsDisableCam}
+                  type="button"
+                  _hover={{
+                    border: 'blue',
+                  }}
+                  _focus={{ boxShadow: 'sm', outline: 'none' }}
+                >
+                  <Box
+                    size="2rem"
+                    color={isDisableCam ? 'red.500' : 'blue.500'}
+                    as={isDisableCam ? MdVideocamOff : MdVideocam}
                   />
                 </Button>
 

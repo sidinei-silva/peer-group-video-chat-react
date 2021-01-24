@@ -20,19 +20,19 @@ export const joinRoom = (room, userId, name) => {
   }
 };
 
-export const subcribeUserConnect = callback => {
+export const subscribeUserConnect = callback => {
   return socket.on('user-connected', ({ userId, userName }) => {
     return callback(null, userId, userName);
   });
 };
 
-export const subcribeUserDisconnect = callback => {
+export const subscribeUserDisconnect = callback => {
   return socket.on('user-disconnected', userId => {
     return callback(null, userId);
   });
 };
 
-export const subcribeCreateMessage = callback => {
+export const subscribeCreateMessage = callback => {
   return socket.on('create-message', ({ name, message }) => {
     return callback(null, name, message);
   });
@@ -42,7 +42,7 @@ export const socketSendMessage = (name, message) => {
   socket.emit('message', { name, message });
 };
 
-export const subcribeToggleHandUp = callback => {
+export const subscribeToggleHandUp = callback => {
   return socket.on('toggle-hand-up', ({ userId, isHandUp }) => {
     return callback(null, userId, isHandUp);
   });
@@ -56,13 +56,13 @@ export const socketSendNotification = notification => {
   socket.emit('notification', { notification });
 };
 
-export const subcribeCreateNotification = callback => {
+export const subscribeCreateNotification = callback => {
   return socket.on('create-notification', ({ notification }) => {
     return callback(null, notification);
   });
 };
 
-export const subcribeToggleMute = callback => {
+export const subscribeToggleMute = callback => {
   return socket.on('toggle-mute', ({ userId, isMute }) => {
     return callback(null, userId, isMute);
   });
@@ -80,7 +80,7 @@ export const userStopTransmitting = () => {
   socket.emit('user-stop-transmitting', {});
 };
 
-export const subcribeRemoveSharedScreen = callback => {
+export const subscribeRemoveSharedScreen = callback => {
   return socket.on('remove-shared-screen', ({ userId }) => {
     return callback(null, userId);
   });

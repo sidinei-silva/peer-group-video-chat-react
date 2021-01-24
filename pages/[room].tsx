@@ -69,13 +69,13 @@ import {
   socketIoRemoveAllEvents,
   socketSendMessage,
   socketSendNotification,
-  subcribeCreateMessage,
-  subcribeCreateNotification,
-  subcribeRemoveSharedScreen,
-  subcribeToggleHandUp,
-  subcribeToggleMute,
-  subcribeUserConnect,
-  subcribeUserDisconnect,
+  subscribeCreateMessage,
+  subscribeCreateNotification,
+  subscribeRemoveSharedScreen,
+  subscribeToggleHandUp,
+  subscribeToggleMute,
+  subscribeUserConnect,
+  subscribeUserDisconnect,
   subscribeToggleCam,
   userStartTransmitting,
   userStopTransmitting,
@@ -272,7 +272,7 @@ const RoomPage: React.FC = () => {
       }
     });
 
-    subcribeUserConnect((err, userId, userName) => {
+    subscribeUserConnect((err, userId, userName) => {
       if (err) {
         console.log(err);
         socketSendNotification(err.message);
@@ -341,7 +341,7 @@ const RoomPage: React.FC = () => {
       });
     });
 
-    subcribeUserDisconnect((err, userId) => {
+    subscribeUserDisconnect((err, userId) => {
       if (peers[userId]) {
         peers[userId].close();
         const elementDisconnected = document.getElementById(userId);
@@ -360,15 +360,15 @@ const RoomPage: React.FC = () => {
       }
     });
 
-    subcribeCreateMessage((err, authorName, message) => {
+    subscribeCreateMessage((err, authorName, message) => {
       addMessage({ authorName, message, position: 'left' });
     });
 
-    subcribeToggleHandUp((err, userId, isHandUp) => {
+    subscribeToggleHandUp((err, userId, isHandUp) => {
       changeHandsUpElementRemote(userId, isHandUp);
     });
 
-    subcribeToggleMute((err, userId, isMutedParamns) => {
+    subscribeToggleMute((err, userId, isMutedParamns) => {
       changeMuteElementRemote(userId, isMutedParamns);
     });
 
@@ -376,7 +376,7 @@ const RoomPage: React.FC = () => {
       changeCamElementRemote(userId, isDisableCamParams);
     });
 
-    subcribeCreateNotification((err, notification) => {
+    subscribeCreateNotification((err, notification) => {
       toast.closeAll();
       toast({
         description: notification,
@@ -391,7 +391,7 @@ const RoomPage: React.FC = () => {
       console.log(errorPeer);
     });
 
-    subcribeRemoveSharedScreen((err, userId) => {
+    subscribeRemoveSharedScreen((err, userId) => {
       removeSharedVideoScreen(userId);
       if (peers[userId]) {
         peers[userId].close();

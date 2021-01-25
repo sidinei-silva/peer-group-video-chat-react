@@ -16,15 +16,20 @@ export const getMyMediaWebCam = callback => {
             .catch(() => {
               alert('Não foi possivel capturar microfone');
               if (typeof window !== 'undefined') {
-                window.location.replace('/');
+                if (window.location.pathname !== '/') {
+                  window.location.replace('/');
+                }
               }
             });
         } else {
           alert('Não foi possivel capturar camera ou microfone');
           if (typeof window !== 'undefined') {
-            window.location.replace('/');
+            if (window.location.pathname !== '/') {
+              window.location.replace('/');
+            }
           }
         }
+        return callback(error, undefined);
       });
   }
 };

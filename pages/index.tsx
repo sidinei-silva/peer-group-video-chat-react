@@ -40,14 +40,18 @@ export default function Home() {
     }
 
     getMyMediaWebCam((err, stream) => {
-      if (!stream.getVideoTracks().length) {
-        setContainCam(false);
-      }
+      if (stream) {
+        if (!stream.getVideoTracks().length) {
+          setContainCam(false);
+        }
 
-      const video = myVideoEl.current;
-      video.srcObject = stream;
-      video.play();
-      video.muted = true;
+        const video = myVideoEl.current;
+        video.srcObject = stream;
+        video.play();
+        video.muted = true;
+      } else {
+        setDisableButton(true);
+      }
     });
   }, [myVideoEl]);
 
@@ -87,7 +91,7 @@ export default function Home() {
 
             {disableButton && (
               <Button disabled boxShadow="md" py="2rem" size="lg">
-                Necessário permissão de camera
+                Necessário permissão de camera ou microfone
               </Button>
             )}
           </VStack>

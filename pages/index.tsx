@@ -9,6 +9,7 @@ import {
   HStack,
   Box,
   Button,
+  Flex,
 } from '@chakra-ui/react';
 import { getMyMediaWebCam } from '../services/navegatorMedia';
 
@@ -18,6 +19,8 @@ export default function Home() {
   const [disableButton, setDisableButton] = useState(false);
   const [myCodeRoom, setMyCodeRoomUrlRoom] = useState('');
   const urlRoom = `${pageUrl}/${myCodeRoom}`;
+
+  const [containCam, setContainCam] = useState(true);
 
   useEffect(() => {
     const uuid = uuidv4();
@@ -37,6 +40,10 @@ export default function Home() {
     }
 
     getMyMediaWebCam((err, stream) => {
+      if (!stream.getVideoTracks().length) {
+        setContainCam(false);
+      }
+
       const video = myVideoEl.current;
       video.srcObject = stream;
       video.play();
@@ -84,7 +91,19 @@ export default function Home() {
               </Button>
             )}
           </VStack>
-          <Box>
+          <Flex
+            justify="center"
+            alignItems="center"
+            width="25%"
+            height="100%"
+            display={containCam ? 'none' : 'flex'}
+            border="1px red solid"
+          >
+            <Text textAlign="center" fontSize="1.2rem" color="red.500">
+              Não há camera disponível
+            </Text>
+          </Flex>
+          <Box display={containCam ? 'block' : 'none'}>
             <video ref={myVideoEl}>
               <track kind="captions" srcLang="pt-BR" />
             </video>

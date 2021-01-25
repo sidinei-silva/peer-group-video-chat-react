@@ -12,9 +12,15 @@ export const getMyMediaWebCam = callback => {
             .getUserMedia({ video: false, audio: true })
             .then(stream => {
               return callback(null, stream);
+            })
+            .catch(() => {
+              alert('Não foi possivel capturar microfone');
+              if (typeof window !== 'undefined') {
+                window.location.replace('/');
+              }
             });
         } else {
-          alert('Não foi possivel capturar camera');
+          alert('Não foi possivel capturar camera ou microfone');
           if (typeof window !== 'undefined') {
             window.location.replace('/');
           }

@@ -125,6 +125,9 @@ const RoomPage: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isDisableCam, setIsDisableCam] = useState(false);
 
+  const [permissionCam, setPermissionCam] = useState(true);
+  const [permissionMicrophone, setPermissionMicrophone] = useState(true);
+
   const [chatMessages, setChatMessages] = useState<IChatMessage[]>([]);
 
   const [transmittingScreen, setTransmittingScreen] = useState(false);
@@ -173,6 +176,11 @@ const RoomPage: React.FC = () => {
       return;
     }
     getMyMediaWebCam((err, stream) => {
+      if (!stream.getVideoTracks().length) {
+        handleIsDisableCam();
+        setPermissionCam(false);
+      }
+
       const videoInitial = myVideoInitialEl.current;
       videoInitial.srcObject = stream;
       videoInitial.play();
@@ -204,6 +212,7 @@ const RoomPage: React.FC = () => {
       if (typeCall === 'webcam') {
         getMyMediaWebCam((errWebCam, stream) => {
           call.answer(stream);
+          console.log(call);
           const { user: userCalling }: { user: IUser } = call.metadata;
 
           const divElVideo = document.createElement('div');
@@ -326,6 +335,11 @@ const RoomPage: React.FC = () => {
             id: userId,
             name: userName,
           });
+
+          const srcObjectRemove: any = newUserVideoElement.srcObject;
+          if (!srcObjectRemove.getVideoTracks().length) {
+            changeCamElementRemote(userId, true);
+          }
         };
 
         const videoElementScreenShared: any = document.getElementById(
@@ -500,7 +514,11 @@ const RoomPage: React.FC = () => {
 
     const myVideoElement = myVideoEl.current;
     const streamMyVideo = myVideoElement.srcObject;
-    streamMyVideo.getVideoTracks()[0].enabled = isDisableCam;
+
+    if (streamMyVideo) {
+      const videoTracks = streamMyVideo.getVideoTracks();
+      videoTracks[0].enabled = isDisableCam;
+    }
 
     if (!isDisableCam) {
       myVideoElement.style.display = 'none';
@@ -598,7 +616,11 @@ const RoomPage: React.FC = () => {
 
     const mediaConnection = myPeer.connections[userId][0];
 
-    mediaConnection.remoteStream.getVideoTracks()[0].enabled = !isDisableCamParamns;
+    const remoteVideoTrack = mediaConnection.remoteStream.getVideoTracks();
+
+    if (remoteVideoTrack.length) {
+      remoteVideoTrack[0].enabled = !isDisableCamParamns;
+    }
 
     const videoElementRemote = document.getElementById(`video-${userId}`);
     const avatarElementRemote = document.getElementById(`avatar-${userId}`);
@@ -838,6 +860,7 @@ const RoomPage: React.FC = () => {
                     border: 'blue',
                   }}
                   _focus={{ boxShadow: 'sm', outline: 'none' }}
+                  disabled={!permissionMicrophone}
                 >
                   <Box
                     size="2rem"
@@ -853,6 +876,7 @@ const RoomPage: React.FC = () => {
                     border: 'blue',
                   }}
                   _focus={{ boxShadow: 'sm', outline: 'none' }}
+                  disabled={!permissionCam}
                 >
                   <Box
                     size="2rem"
@@ -989,6 +1013,7 @@ const RoomPage: React.FC = () => {
                       border: 'blue',
                     }}
                     _focus={{ boxShadow: 'sm', outline: 'none' }}
+                    disabled={!permissionMicrophone}
                   >
                     <Box
                       size="2rem"
@@ -1004,6 +1029,7 @@ const RoomPage: React.FC = () => {
                       border: 'blue',
                     }}
                     _focus={{ boxShadow: 'sm', outline: 'none' }}
+                    disabled={!permissionCam}
                   >
                     <Box
                       size="2rem"

@@ -6,10 +6,24 @@ export const getMyMediaWebCam = callback => {
       .then(stream => {
         return callback(null, stream);
       })
-      .catch(() => {
-        alert('Não foi possivel capturar camera');
-        if (typeof window !== 'undefined') {
-          window.location.replace('/');
+      .catch(error => {
+        if (error.name === 'NotFoundError') {
+          navigator.mediaDevices
+            .getUserMedia({ video: false, audio: true })
+            .then(stream => {
+              return callback(null, stream);
+            })
+            .catch(() => {
+              alert('Não foi possivel capturar microfone');
+              if (typeof window !== 'undefined') {
+                window.location.replace('/');
+              }
+            });
+        } else {
+          alert('Não foi possivel capturar camera ou microfone');
+          if (typeof window !== 'undefined') {
+            window.location.replace('/');
+          }
         }
       });
   }

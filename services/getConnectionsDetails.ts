@@ -22,7 +22,7 @@ export default function getConnectionDetails(peerConnection) {
           );
         })[0];
 
-        if (!filtered) return reject(new Error('Something is wrong...'));
+        if (!filtered) return false;
 
         reqFields.forEach(function (e) {
           connectionDetails[e.replace('goog', '')] = filtered.stat(e);
